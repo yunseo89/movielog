@@ -15,12 +15,12 @@ void main() {
 
 //for문 사용 
 for(var i = 0; i < movietitle.length; i++) {
-  print(movietitle[i].title); //영화 객체의 title을 출력
+  debugPrint(movietitle[i].title); //영화 객체의 title을 출력
 }
 
 String? nickname;
 String safeNickname = nickname ?? '회원님'; //nickname이 null이면 '회원님'을
-print(safeNickname); //출력
+debugPrint(safeNickname); //출력
 
   runApp(
     const MaterialApp(
