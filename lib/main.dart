@@ -244,14 +244,14 @@ class StatItem extends StatelessWidget {
   }
 }
 
-// 🎨 선호하는 장르 파트를 위한 위젯
+// 🎨 선호하는 장르 파트를 위한 위젯(컨테이너)
 Widget _buildGenreChip(BuildContext context, String title) {
   final colors = Theme.of(context).colorScheme;
 
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // 안쪽 여백
     decoration: BoxDecoration(
-      color: colors.primaryContainer.withOpacity(0.4), // 연한 보라색 배경
+      color: colors.primaryContainer.withValues(alpha: 0.4), // 연한 보라색 배경(오래된 문법이라고 함)
       borderRadius: BorderRadius.circular(20),          // 둥근 캡슐형 모서리 (원하면 8 등 숫자로 변경 가능)
     ),
     child: Text(
