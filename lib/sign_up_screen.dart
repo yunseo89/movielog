@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -214,8 +213,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   // 3. 약관 및 하단 영역 위젯
-  
-// 3. 약관 및 하단 영역 위젯
   Widget _buildTermsAndSubmit() {
     return Column(
       children: [
@@ -240,8 +237,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ],
         ),
         const SizedBox(height: 24),
-        
-        // 👇 바로 이 가입하기 버튼의 onPressed 동작이 수정되었습니다.
         ElevatedButton(
           onPressed: _isButtonEnabled
               ? () {
@@ -249,15 +244,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('가입이 완료되었습니다!')),
                     );
-                    
-                    // ✨ 중요: 회원가입 완료 후 홈으로 이동 (뒤로가기 불가)
-                    context.go('/home');
                   }
                 }
               : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.deepPurple,
-            disabledBackgroundColor: Colors.deepPurple.shade200, 
+            disabledBackgroundColor: Colors.deepPurple.shade200, // 비활성화 시 연한 보라색
             foregroundColor: Colors.white,
             disabledForegroundColor: Colors.white,
             minimumSize: const Size(double.infinity, 50),
@@ -266,7 +258,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
           child: const Text('가입하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
-        
         const SizedBox(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
