@@ -1,30 +1,144 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'theme/app_theme.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'sign_up_screen.dart'; 
+import 'sign_up_screen.dart';
 
 void main() => runApp(const MovieLogApp());
 
-class MovieLogApp extends StatelessWidget {
-  const MovieLogApp({super.key});
+// ==========================================
+// 🚀 [데이터 모델 및 Mock Data 업데이트]
+// ==========================================
+class Movie {
+  final String id;
+  final String title;
+  final String genre;
+  final String year;
+  final double rating;
+  final String synopsis;
+  final String? duration; // 재생 시간 추가
 
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: AppTheme.light, //디자인 규칙 연결!
-    home: const SignUpScreen(), //변경!(profile to signup)
-  );
+  Movie({
+    required this.id,
+    required this.title,
+    required this.genre,
+    required this.year,
+    required this.rating,
+    required this.synopsis,
+    this.duration,
+  });
 }
 
-class StartScreen extends StatelessWidget { 
-  const StartScreen({super.key});
+// 시안에 맞춘 Mock 데이터
+final List<Movie> mockMovies = [
+  Movie(
+    id: '1', 
+    title: '별빛 아래 우리', 
+    genre: '로맨스 · 드라마', // 👈 이 부분이 그대로 유지되도록 설정
+    year: '2023', 
+    rating: 4.8, 
+    duration: '120분', // 👈 시간이 정상적으로 들어가도록 설정
+    synopsis: '바쁜 현대 사회 속에서 서로의 존재를 잊고 살아가던 두 남녀가 우연한 계기로 작은 천문대에서 만나게 됩니다.'
+  ),
+  Movie(id: '2', title: '우주의 끝에서', genre: 'SF', year: '2024', rating: 4.2, synopsis: '미지의 행성을 탐사하던 중 발견한 고대 유적의 비밀.'),
+  Movie(id: '3', title: '기억의 숲', genre: '애니메이션', year: '2022', rating: 4.9, synopsis: '잃어버린 기억을 찾아 몽환적인 숲으로 떠나는 모험.'),
+  Movie(id: '4', title: '밤의 그림자', genre: '스릴러', year: '2024', rating: 3.8, synopsis: '어두운 도시의 이면에서 벌어지는 숨 막히는 추격전.'),
+  Movie(id: '5', title: '봄날의 커피', genre: '로맨스', year: '2021', rating: 4.5, synopsis: '따뜻한 봄날, 카페에서 시작된 인연.'),
+  Movie(id: '6', title: '도시의 선', genre: '다큐멘터리', year: '2023', rating: 4.1, synopsis: '현대 건축물들이 그리는 도심 속 선의 미학.'),
+];
 
-// 수정 시작
+final List<Movie> popularMovies = [
+  Movie(id: '101', title: '마션 레스큐', genre: 'SF', year: '2024', rating: 9.6, synopsis: ''),
+  Movie(id: '102', title: '스파이 코드', genre: '액션', year: '2024', rating: 9.2, synopsis: ''),
+  Movie(id: '103', title: '비오는 날의 기적', genre: '드라마', year: '2023', rating: 8.9, synopsis: ''),
+];
+
+Movie findMovieById(String id) {
+  return [...mockMovies, ...popularMovies].firstWhere((movie) => movie.id == id, orElse: () => mockMovies.first);
+}
+
+// ==========================================
+// 🚀 [GoRouter 라우팅 설정]
+// ==========================================
+final GoRouter _router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const StartScreen()),
+    GoRoute(path: '/signup', builder: (context, state) => const SignUpScreen()),
+    ShellRoute(
+      builder: (context, state, child) => MainScaffold(child: child),
+      routes: [
+        GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+        GoRoute(
+          path: '/movies',
+          builder: (context, state) => const MovieListScreen(),
+          routes: [
+            GoRoute(
+              path: ':movieId',
+              builder: (context, state) => MovieDetailScreen(movieId: state.pathParameters['movieId']!),
+            ),
+          ],
+        ),
+        GoRoute(path: '/my', builder: (context, state) => const ProfileScreen()),
+      ],
+    ),
+  ],
+);
+
+class MovieLogApp extends StatelessWidget {
+  const MovieLogApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      routerConfig: _router,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+    );
+  }
+}
+
+// ==========================================
+// 🚀 [하단 네비게이션 바] - 시안의 보라색 둥근 선택 배경 적용
+// ==========================================
+class MainScaffold extends StatelessWidget {
+  final Widget child;
+  const MainScaffold({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) { //위젯 1
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+  Widget build(BuildContext context) {
+    int currentIndex = 0;
+    final location = GoRouterState.of(context).uri.path;
+    if (location.startsWith('/movies')) currentIndex = 1;
+    if (location.startsWith('/my')) currentIndex = 2;
+
+    return Scaffold(
+      body: child,
+      // 시안과 동일한 Material 3 네비게이션 바
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: currentIndex,
+        onDestinationSelected: (index) {
+          if (index == 0) context.go('/home');
+          if (index == 1) context.go('/movies');
+          if (index == 2) context.go('/my');
+        },
+        indicatorColor: Colors.deepPurple.shade100, // 선택 시 보라색 타원 배경
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home, color: Colors.deepPurple), label: '홈'),
+          NavigationDestination(icon: Icon(Icons.movie_outlined), selectedIcon: Icon(Icons.movie, color: Colors.deepPurple), label: '영화'),
+          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person, color: Colors.deepPurple), label: '마이'),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 🚀 [1. 시작 화면] (유지)
+// ==========================================
+class StartScreen extends StatelessWidget { 
+  const StartScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -37,39 +151,18 @@ class StartScreen extends StatelessWidget {
                   const SizedBox(height: 32),
                   const Text('FLUTTER 1주차'),
                   const SizedBox(height: 64),
-
-//스텝 3 수정
-                  SvgPicture.asset(
-                    'assets/logos/movielog_logo.svg',
-                    width: 72,
-                    height: 72,
-                    semanticsLabel: 'MovieLog 로고',
-                  ),
-                
+                  const Icon(Icons.movie_creation, size: 72, color: Colors.deepPurple),
                   const SizedBox(height: 32),
-                  Text(
-                    '영화의 순간을\n기록하세요',
-                    textAlign: TextAlign.center,
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text('영화의 순간을\n기록하세요', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-                  const Text(
-                    '보고 싶은 영화부터 나만의 평점까지\n한곳에서 관리해요',
-                    textAlign: TextAlign.center,
-                  ),
+                  const Text('보고 싶은 영화부터 나만의 평점까지\n한곳에서 관리해요', textAlign: TextAlign.center),
                 ],
               ),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {}, // 1주차에는 화면 이동을 연결하지 않습니다.
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    backgroundColor: colors.primary,
-                    foregroundColor: colors.onPrimary,
-                  ),
+                  onPressed: () => context.go('/signup'),
+                  style: ElevatedButton.styleFrom(minimumSize: const Size(0, 48), backgroundColor: Colors.deepPurple, foregroundColor: Colors.white),
                   child: const Text('시작하기'),
                 ),
               ),
@@ -82,186 +175,517 @@ class StartScreen extends StatelessWidget {
 }
 
 // ==========================================
-// 🚀 [스텝 4] 프로필 화면 및 헤더 구현하기
+// 🚀 [2. 홈 화면] - 히어로 카드 및 인기 영화 뱃지 디자인 적용
 // ==========================================
-
-// 2️⃣ 프로필 전체 화면 (Scaffold 뼈대 제공)
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) { //위젯 2
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).colorScheme;
+  Widget build(BuildContext context) {
+    final heroMovie = mockMovies[0];
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('내 프로필'),
-        centerTitle: false, //가운데를 원하면 true
-        titleTextStyle: TextStyle(
-        color: colors.primary, //수정
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'MovieLog', 
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple)
         ),
+        centerTitle: false, // 👈 로고가 중앙에 있지 않고 왼쪽으로 가도록 설정!
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.black87), 
+            onPressed: () {}
+          )
+        ],
       ),
-      body: SingleChildScrollView( //스크롤바를 만들어주는 위젯
-        padding: const EdgeInsets.all(24.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              '오늘은 어떤\n영화를 볼까요?', 
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.3)
+            ),
+            const SizedBox(height: 20),
             
-            //프로필 헤더
-            const ProfileHeader(),
-
-            //프로필 수정 버튼 추가
-            const SizedBox(height: 32), // 8px 간격 단위 준수
-            
-            Center(
-              child: SizedBox(
-              width: 150,
-              child: OutlinedButton( //워크북 요구사항 x
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                 side: BorderSide(color: colors.primary), // 보라색 테두리
-                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8), // 8px 둥근 모서리
-      ),
-    ),
-                child: Text('프로필 수정', style: TextStyle(color: colors.primary),
+            // 🎬 히어로 무비 카드
+            GestureDetector(
+              onTap: () => context.push('/movies/${heroMovie.id}'),
+              child: Container(
+                width: double.infinity,
+                height: 400,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.grey.shade900,
+                ),
+                child: Stack(
+                  children: [
+                    const Positioned.fill(
+                      child: Center(
+                        child: Icon(Icons.image, color: Colors.white24, size: 80)
+                      )
+                    ),
+                    Positioned(
+                      bottom: 0, left: 0, right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter, 
+                            end: Alignment.topCenter, 
+                            colors: [Colors.black.withOpacity(0.9), Colors.transparent]
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple.withOpacity(0.9), 
+                                borderRadius: BorderRadius.circular(12)
+                              ),
+                              child: const Text('추천 신작', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(heroMovie.title, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            // 👇 null 대신 장르와 재생시간이 정상적으로 출력되도록 수정
+                            // 👈 장르와 시간이 중간에 잘리지 않고 '로맨스 · 드라마 · 120분' 형태로 온전히 출력됩니다!
+                            Text(
+                              '${heroMovie.genre} · ${heroMovie.duration ?? ''}', 
+                              style: const TextStyle(color: Colors.white70, fontSize: 14)
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () => context.push('/movies/${heroMovie.id}'),
+                                icon: const Icon(Icons.info_outline, size: 18),
+                                label: const Text('상세보기', style: TextStyle(fontWeight: FontWeight.bold)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.deepPurple, 
+                                  foregroundColor: Colors.white, 
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    )
+                  ],
                 ),
               ),
             ),
-            ),
-
             const SizedBox(height: 32),
- 
-            // 2️⃣ 스텝 5에서 만든 통계 항목 1개 ('본 영화')
+            
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround, //spaceBetween은 양 끝에 딱 붙이고,
-              //남은 공간을 아이템들 사이에 똑같이 나누어주는 개념.. Around는 끝과 끝이 더 안쪽으로 들어옴
-              children: const[ //아래 위젯 활용
-                StatItem(label: '본 영화', value: '24'),
-                StatItem(label: '평점', value: '4.8'), //미션 수행 - 통계 항목 채우기
-                StatItem(label: '즐겨찾기', value: '12')
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('인기 영화', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                TextButton(
+                  onPressed: () {},
+                  child: const Text('전체보기 >', style: TextStyle(color: Colors.deepPurple)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 220,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: popularMovies.length,
+                itemBuilder: (context, index) {
+                  final movie = popularMovies[index];
+                  return GestureDetector(
+                    onTap: () => context.push('/movies/${movie.id}'),
+                    child: Container(
+                      width: 130,
+                      margin: const EdgeInsets.only(right: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12)),
+                                  child: const Center(child: Icon(Icons.image, size: 40, color: Colors.grey)),
+                                ),
+                                Positioned(
+                                  top: 0, left: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black87, 
+                                      borderRadius: BorderRadius.only(topLeft: Radius.circular(12), bottomRight: Radius.circular(12))
+                                    ),
+                                    child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(movie.title, style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.amber, size: 14),
+                              const SizedBox(width: 4),
+                              Text('${movie.rating}', style: const TextStyle(color: Colors.black87, fontSize: 13)),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 32), // 8px 간격 단위 준수
-
-        Text(
-          '선호하는 장르',
-           style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,  
-            )
-        ),
-        const SizedBox(height: 12),
-
-        Row(  //위젯을 추가해서 보라색 배경, 글자색, 둥근 모서리 단체 적용
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            _buildGenreChip(context, '드라마'),
-            SizedBox(width: 8), // 8px 간격 단위 준수
-            _buildGenreChip(context, 'SF'),
-            SizedBox(width: 8),
-            _buildGenreChip(context, '애니메이션'),
-  ]
-  ),
-          ]
-        )
-    )
+      ),
     );
   }
 }
 
-// 3️⃣ 스텝 4의 핵심: 프로필 헤더 위젯 - 위에서 가져다 씀
-class ProfileHeader extends StatelessWidget {
-  const ProfileHeader({super.key});
-
+// ==========================================
+// 🚀 [3. 영화 목록 화면] - 상단바 정렬, 칩 디자인, 평점 뱃지 적용
+// ==========================================
+class MovieListScreen extends StatefulWidget {
+  const MovieListScreen({super.key});
   @override
-  Widget build(BuildContext context) { //위젯 3
-    final textTheme = Theme.of(context).textTheme;
-
-    return Center(
-      child: Column(
-        children: [
-          // ① 프로필 이미지 (CircleAvatar 사용)
-         const CircleAvatar(
-            radius: 50,
-            backgroundImage: AssetImage('assets/images/profile/profile.jpg'),
-          ),
-          const SizedBox(width: 16), // 8px 간격 단위 준수 (16px)
-
-          // ② 닉네임 & ③ 소개글 영역 (세로로 쌓기)
-        
-                Text(
-                  '무비러버', // 닉네임
-                  style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8), // 8px 간격 단위 준수
-
-                const Text(
-                  '좋아하는 영화를 기록하고 있어요', //소개글
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-  }
+  State<MovieListScreen> createState() => _MovieListScreenState();
 }
 
-// 스텝 5 통계 위젯
-class StatItem extends StatelessWidget {
-  const StatItem({
-    super.key,
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
+class _MovieListScreenState extends State<MovieListScreen> {
+  final List<String> genres = ['전체', '드라마', 'SF', '애니메이션', '스릴러'];
+  String selectedGenre = '전체';
 
   @override
-  Widget build(BuildContext context) { //위젯 4
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+  Widget build(BuildContext context) {
+    final filteredMovies = selectedGenre == '전체' ? mockMovies : mockMovies.where((m) => m.genre.contains(selectedGenre)).toList();
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('영화', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+        centerTitle: false, // 좌측 정렬
+        actions: [IconButton(icon: const Icon(Icons.search, color: Colors.black54), onPressed: () {})],
       ),
-      decoration: BoxDecoration(
-        color: colors.surface, 
-        border: Border.all(color: Colors.grey.shade300), 
-        borderRadius: BorderRadius.circular(12), 
-      ),
-      child: Column(
+      body: Column(
         children: [
-          Text(label, style: const TextStyle(color: Colors.black54)),
-          const SizedBox(height: 4),
-          Text(value, style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: colors.primary)),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: genres.map((genre) {
+                final isSelected = selectedGenre == genre;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ChoiceChip(
+                    label: Text(genre),
+                    selected: isSelected,
+                    onSelected: (selected) { if (selected) setState(() => selectedGenre = genre); },
+                    selectedColor: Colors.deepPurple,
+                    backgroundColor: Colors.white,
+                    side: BorderSide(color: isSelected ? Colors.deepPurple : Colors.grey.shade300),
+                    labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black87),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, childAspectRatio: 0.65, crossAxisSpacing: 16, mainAxisSpacing: 24,
+              ),
+              itemCount: filteredMovies.length,
+              itemBuilder: (context, index) {
+                final movie = filteredMovies[index];
+                return GestureDetector(
+                  onTap: () => context.push('/movies/${movie.id}'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12)),
+                              child: const Center(child: Icon(Icons.image, size: 40, color: Colors.grey)),
+                            ),
+                            // 우측 상단 별점 뱃지
+                            Positioned(
+                              top: 8, right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(8)),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.star, color: Colors.white, size: 12),
+                                    const SizedBox(width: 4),
+                                    Text('${movie.rating}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(movie.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1),
+                      const SizedBox(height: 4),
+                      Text('${movie.year} · ${movie.genre.split(' · ')[0]}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// 🎨 선호하는 장르 파트를 위한 위젯(컨테이너)
-Widget _buildGenreChip(BuildContext context, String title) {
-  final colors = Theme.of(context).colorScheme;
+// ==========================================
+// 🚀 [4. 영화 상세 화면] (유지)
+// ==========================================
+class MovieDetailScreen extends StatefulWidget {
+  final String movieId;
+  const MovieDetailScreen({super.key, required this.movieId});
+  @override
+  State<MovieDetailScreen> createState() => _MovieDetailScreenState();
+}
 
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // 안쪽 여백
-    decoration: BoxDecoration(
-      color: colors.primaryContainer.withValues(alpha: 0.4), // 연한 보라색 배경(오래된 문법이라고 함)
-      borderRadius: BorderRadius.circular(20),          // 둥근 캡슐형 모서리 (원하면 8 등 숫자로 변경 가능)
-    ),
-    child: Text(
-      title,
-      style: TextStyle(
-        color: colors.primary,      // 글자색을 진한 보라색으로
-        fontWeight: FontWeight.bold,
+class _MovieDetailScreenState extends State<MovieDetailScreen> {
+  bool isFavorite = false;
+
+  void _showRatingDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('평점 남기기'),
+          content: RatingBar.builder(
+            initialRating: 3, minRating: 0.5, direction: Axis.horizontal, allowHalfRating: true,
+            itemCount: 5, itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+            itemBuilder: (context, _) => const Icon(Icons.star, color: Colors.amber),
+            onRatingUpdate: (rating) {},
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('평점이 등록되었습니다.')));
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final movie = findMovieById(widget.movieId);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Cinema Archive', style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: Icon(isFavorite ? Icons.bookmark : Icons.bookmark_border, color: isFavorite ? Colors.deepPurple : Colors.black),
+            onPressed: () {
+              setState(() => isFavorite = !isFavorite);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isFavorite ? '즐겨찾기에 추가되었습니다.' : '즐겨찾기에서 삭제되었습니다.')));
+            },
+          )
+        ],
       ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(height: 300, color: Colors.grey.shade900, child: const Center(child: Icon(Icons.image, size: 80, color: Colors.white24))),
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(movie.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text('${movie.year} · ${movie.genre}', style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      RatingBarIndicator(
+                        rating: movie.rating, itemBuilder: (context, index) => const Icon(Icons.star, color: Colors.amber),
+                        itemCount: 5, itemSize: 24.0,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(movie.rating.toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text('시놉시스', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(movie.synopsis, style: const TextStyle(height: 1.5)),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _showRatingDialog,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
+                      child: const Text('평점 남기기', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 🚀 [5. 마이페이지] - 테두리, 배경색 등 시안 완벽 반영
+// ==========================================
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('내 프로필'),
+        centerTitle: false,
+        titleTextStyle: const TextStyle(color: Colors.deepPurple, fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ProfileHeader(),
+            const SizedBox(height: 24),
+            Center(
+              child: SizedBox(
+                width: 120,
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.deepPurple),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('프로필 수정', style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Expanded(child: StatItem(label: '본 영화', value: '342')),
+                SizedBox(width: 16),
+                Expanded(child: StatItem(label: '평점', value: '4.2')),
+                SizedBox(width: 16),
+                Expanded(child: StatItem(label: '즐겨찾기', value: '58')),
+              ],
+            ),
+            const SizedBox(height: 40),
+            Text('선호하는 장르', style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              children: [
+                _buildGenreChip('드라마'),
+                _buildGenreChip('SF'),
+                _buildGenreChip('애니메이션'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileHeader extends StatelessWidget {
+  const ProfileHeader({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Center(
+      child: Column(
+        children: [
+          // 시안의 보라색 테두리가 있는 프로필 이미지 적용
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: const BoxDecoration(color: Colors.deepPurple, shape: BoxShape.circle),
+            child: const CircleAvatar(
+              radius: 50,
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, size: 60, color: Colors.grey),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('무비러버', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('매주 주말엔 영화관으로 출근하는 프로 관람객. 좋\n은 영화를 보고 기록하는 것을 좋아합니다.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87, height: 1.4)),
+        ],
+      ),
+    );
+  }
+}
+
+class StatItem extends StatelessWidget {
+  const StatItem({super.key, required this.label, required this.value});
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.deepPurple.shade50.withOpacity(0.5), // 시안의 아주 연한 보라색 배경
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.deepPurple.shade100, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: const TextStyle(color: Colors.black87, fontSize: 13)),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple, fontSize: 22)),
+        ],
+      ),
+    );
+  }
+}
+
+Widget _buildGenreChip(String title) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.deepPurple.shade50, // 연한 보라색 배경
+      borderRadius: BorderRadius.circular(20),
     ),
+    child: Text(title, style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold, fontSize: 13)),
   );
 }
