@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../models/movie.dart';
+import '../view_models/movie_home_view_model.dart';
+import '../widgets/tmdb_poster_image.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -131,52 +133,103 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           SliverToBoxAdapter(
-            child: SizedBox(
-              height: 205,
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                scrollDirection: Axis.horizontal,
-                itemCount: mockMovies.length,
-                itemBuilder: (context, index) {
-                  final movie = mockMovies[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: SizedBox(
-                      width: 112,
+            child: Consumer<MovieHomeViewModel>(
+              builder: (context, viewModel, child) {
+                if (viewModel.status == MovieHomeLoadStatus.idle ||
+                    viewModel.status == MovieHomeLoadStatus.loading) {
+                  return const SizedBox(
+                    height: 205,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (viewModel.status == MovieHomeLoadStatus.error) {
+                  return SizedBox(
+                    height: 205,
+                    child: Center(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: Image.asset(
-                                movie.imagePath,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 7),
                           Text(
-                            movie.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            viewModel.message ??
+                                '인기 영화를 불러오지 못했어요.',
+                            textAlign: TextAlign.center,
                           ),
-                          Row(
-                            children: [
-                              Icon(Icons.star_rounded,
-                                  size: 15, color: colors.primary),
-                              const SizedBox(width: 2),
-                              Text(movie.rating.toStringAsFixed(1)),
-                            ],
+                          TextButton(
+                            onPressed: () {
+                              context
+                                  .read<MovieHomeViewModel>()
+                                  .loadPopular();
+                            },
+                            child: const Text('다시 시도'),
                           ),
                         ],
                       ),
                     ),
                   );
-                },
-              ),
+                }
+
+                if (viewModel.status == MovieHomeLoadStatus.empty) {
+                  return const SizedBox(
+                    height: 205,
+                    child: Center(child: Text('인기 영화가 없습니다.')),
+                  );
+                }
+
+                final movies = viewModel.popularMovies;
+
+                return SizedBox(
+                  height: 230,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: movies.length,
+                    itemBuilder: (context, index) {
+                      final movie = movies[index];
+
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: SizedBox(
+                          width: 112,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: TmdbPosterImage(
+                                  posterPath: movie.posterPath,
+                                  width: 112,
+                                  height: 135,
+                                ),
+                              ),
+                              const SizedBox(height: 7),
+                              Text(
+                                movie.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.star_rounded,
+                                    size: 15,
+                                    color: colors.primary,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(movie.voteAverage.toStringAsFixed(1)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],

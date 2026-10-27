@@ -1,100 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../models/movie.dart';
-import '../services/fake_movie_service.dart';
-import '../services/genre_preference.dart';
-import '../widgets/movie_grid.dart';
-import '../widgets/movie_list_states.dart';
+import '../data/models/tmdb_movie_dto.dart';
+import '../view_models/movie_list_view_model.dart';
+import '../widgets/tmdb_poster_image.dart';
+import 'tmdb_movie_detail_screen.dart';
 
-class MovieListInitialData {
-  const MovieListInitialData({
-    required this.movies,
-    required this.selectedGenre,
-  });
-
-  final List<Movie> movies;
-  final String selectedGenre;
-}
-
-class MovieListScreen extends StatefulWidget {
+class MovieListScreen extends StatelessWidget {
   const MovieListScreen({super.key});
-
-  @override
-  State<MovieListScreen> createState() => _MovieListScreenState();
-}
-
-class _MovieListScreenState extends State<MovieListScreen> {
-  static const genres = ['전체', '드라마', 'SF', '애니메이션', '스릴러'];
-
-  final FakeMovieService _movieService = const FakeMovieService();
-  final GenrePreference _genrePreference = GenrePreference();
-
-  late Future<MovieListInitialData> _moviesFuture;
-  String _selectedGenre = '전체';
-  MovieLoadMode _loadMode = MovieLoadMode.success;
-
-  @override
-  void initState() {
-    super.initState();
-    _moviesFuture = _loadInitialData();
-  }
-
-  Future<MovieListInitialData> _loadInitialData() async {
-    final results = await Future.wait<Object>([
-      _movieService.fetchMovies(mode: _loadMode),
-      _genrePreference.read(),
-    ]);
-
-    final savedGenre = results[1] as String;
-    if (genres.contains(savedGenre)) {
-      _selectedGenre = savedGenre;
-    }
-
-    return MovieListInitialData(
-      movies: results[0] as List<Movie>,
-      selectedGenre: _selectedGenre,
-    );
-  }
-
-  Future<MovieListInitialData> _loadMovies() async {
-    final movies = await _movieService.fetchMovies(mode: _loadMode);
-    // TODO(5주차 유저별 평점 조회 API): 실제 API Service로 교체할 경계입니다.
-    return MovieListInitialData(
-      movies: movies,
-      selectedGenre: _selectedGenre,
-    );
-  }
-
-  void _retry() {
-    setState(() {
-      // 데모에서는 Retry가 성공으로 회복되는 흐름을 확인합니다.
-      _loadMode = MovieLoadMode.success;
-      _moviesFuture = _loadMovies();
-    });
-  }
-
-  Future<void> _selectGenre(String genre) async {
-    setState(() {
-      _selectedGenre = genre;
-    });
-    await _genrePreference.save(genre);
-  }
-
-  void _changeLoadMode(MovieLoadMode mode) {
-    // PopupMenuButton은 선택 후 스스로 메뉴를 닫습니다.
-    // Navigator.pop()을 호출하면 MainShell까지 닫힐 수 있으므로 호출하지 않습니다.
-    setState(() {
-      _loadMode = mode;
-      _moviesFuture = _loadMovies();
-    });
-  }
-
-  List<Movie> _filterMovies(List<Movie> movies) {
-    if (_selectedGenre == '전체') {
-      return movies;
-    }
-    return movies.where((movie) => movie.genre == _selectedGenre).toList();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,58 +15,119 @@ class _MovieListScreenState extends State<MovieListScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return SafeArea(
-      child: Column(
-        children: [
-          _MovieListHeader(
-            textTheme: textTheme,
-            colors: colors,
-            onLoadModeSelected: _changeLoadMode,
+      child: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            backgroundColor: colors.surface,
+            surfaceTintColor: colors.surface,
+            title: Text(
+              '영화',
+              style: textTheme.headlineSmall?.copyWith(
+                color: colors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            actions: [
+              IconButton(
+                tooltip: '검색',
+                onPressed: () {},
+                icon: const Icon(Icons.search),
+              ),
+            ],
           ),
-          SizedBox(
-            height: 48,
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              scrollDirection: Axis.horizontal,
-              itemCount: genres.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final genre = genres[index];
-                return ChoiceChip(
-                  label: Text(genre),
-                  selected: _selectedGenre == genre,
-                  onSelected: (_) => _selectGenre(genre),
+          SliverToBoxAdapter(
+            child: Consumer<MovieListViewModel>(
+              builder: (context, viewModel, _) {
+                final isLoading = viewModel.isLoading;
+                return SizedBox(
+                  height: 52,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: viewModel.genres.length + 1,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return ChoiceChip(
+                          label: const Text('전체'),
+                          selected: viewModel.selectedGenreId == null,
+                          onSelected: isLoading
+                              ? null
+                              : (selected) {
+                                  if (selected) {
+                                    context
+                                        .read<MovieListViewModel>()
+                                        .selectGenre(null);
+                                  }
+                                },
+                        );
+                      }
+
+                      final genre = viewModel.genres[index - 1];
+                      return ChoiceChip(
+                        label: Text(genre.name),
+                        selected: viewModel.selectedGenreId == genre.id,
+                        onSelected: isLoading
+                            ? null
+                            : (selected) {
+                                if (selected) {
+                                  context
+                                      .read<MovieListViewModel>()
+                                      .selectGenre(genre.id);
+                                }
+                              },
+                      );
+                    },
+                  ),
                 );
               },
             ),
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: FutureBuilder<MovieListInitialData>(
-              future: _moviesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const MovieListLoading();
-                }
-
-                if (snapshot.hasError) {
-                  return MovieListError(onRetry: _retry);
-                }
-
-                final movies = _filterMovies(
-                  snapshot.data?.movies ?? const <Movie>[],
-                );
-
-                if (movies.isEmpty) {
-                  return const MovieListEmpty();
-                }
-
-                return CustomScrollView(
-                  slivers: [
-                    MovieGrid(movies: movies),
-                  ],
-                );
-              },
-            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 14)),
+          Consumer<MovieListViewModel>(
+            builder: (context, viewModel, _) {
+              switch (viewModel.status) {
+                case MovieListLoadStatus.idle:
+                case MovieListLoadStatus.loading:
+                  return const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _LoadingState(),
+                  );
+                case MovieListLoadStatus.error:
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _ErrorState(
+                      message:
+                          viewModel.message ?? '영화를 불러오지 못했어요. 다시 시도해 주세요.',
+                      onRetry: () => context.read<MovieListViewModel>().retry(),
+                    ),
+                  );
+                case MovieListLoadStatus.empty:
+                  return const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _EmptyState(),
+                  );
+                case MovieListLoadStatus.success:
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    sliver: SliverGrid(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) =>
+                            _TmdbMovieCard(movie: viewModel.movies[index]),
+                        childCount: viewModel.movies.length,
+                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 18,
+                            childAspectRatio: 0.50,
+                          ),
+                    ),
+                  );
+              }
+            },
           ),
         ],
       ),
@@ -161,56 +135,136 @@ class _MovieListScreenState extends State<MovieListScreen> {
   }
 }
 
-class _MovieListHeader extends StatelessWidget {
-  const _MovieListHeader({
-    required this.textTheme,
-    required this.colors,
-    required this.onLoadModeSelected,
-  });
+class _TmdbMovieCard extends StatelessWidget {
+  const _TmdbMovieCard({required this.movie});
 
-  final TextTheme textTheme;
-  final ColorScheme colors;
-  final ValueChanged<MovieLoadMode> onLoadModeSelected;
+  final TmdbMovieDto movie;
+
+  String get _releaseYear {
+    final date = movie.releaseDate;
+    if (date == null || date.length < 4) return '개봉일 미정';
+    return date.substring(0, 4);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 8, 4),
-      child: Row(
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => TmdbMovieDetailScreen(movie: movie),
+          ),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '영화',
-            style: textTheme.headlineSmall?.copyWith(
-              color: colors.primary,
-              fontWeight: FontWeight.bold,
+          AspectRatio(
+            aspectRatio: 0.68,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: TmdbPosterImage(
+                posterPath: movie.posterPath,
+                width: double.infinity,
+                height: 250,
+              ),
             ),
           ),
-          const Spacer(),
-          PopupMenuButton<MovieLoadMode>(
-            tooltip: '상태 테스트',
-            icon: const Icon(Icons.science_outlined),
-            onSelected: onLoadModeSelected,
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: MovieLoadMode.success,
-                child: Text('Success 테스트'),
-              ),
-              PopupMenuItem(
-                value: MovieLoadMode.empty,
-                child: Text('Empty 테스트'),
-              ),
-              PopupMenuItem(
-                value: MovieLoadMode.failure,
-                child: Text('Error 테스트'),
+          const SizedBox(height: 8),
+          Text(
+            movie.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 3),
+          Row(
+            children: [
+              Icon(Icons.star_rounded, size: 16, color: colors.primary),
+              const SizedBox(width: 3),
+              Text(movie.voteAverage.toStringAsFixed(1)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _releaseYear,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall,
+                ),
               ),
             ],
           ),
-          IconButton(
-            tooltip: '검색',
-            onPressed: () {},
-            icon: const Icon(Icons.search),
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 12),
+          Text('영화 목록을 불러오는 중...'),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.movie_filter_outlined, size: 44),
+          SizedBox(height: 12),
+          Text('해당 조건의 영화가 없어요.'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 44),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('다시 시도'),
+            ),
+          ],
+        ),
       ),
     );
   }

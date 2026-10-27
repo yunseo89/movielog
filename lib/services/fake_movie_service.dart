@@ -17,7 +17,7 @@ class FakeMovieService {
   Future<List<Movie>> fetchMovies({
     MovieLoadMode mode = MovieLoadMode.success,
   }) async {
-    await Future<void>.delayed(const Duration(seconds: 3));
+    await Future<void>.delayed(const Duration(seconds: 3)); //시간 설정
 
     return switch (mode) {
       MovieLoadMode.success => mockMovies,
