@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 
+import 'core/network/tmdb_client.dart';
+import 'data/services/tmdb_movie_service.dart';
+import 'profile_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/movie_list_screen.dart';
-import 'profile_screen.dart';
 import 'sign_up_screen.dart';
 import 'theme/app_theme.dart';
+import 'view_models/movie_home_view_model.dart';
+import 'view_models/movie_list_view_model.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
   runApp(const MovieLogApp());
 }
 
@@ -16,10 +24,22 @@ class MovieLogApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: const MainShell(),
+    return MultiProvider(
+      providers: [
+        Provider<TmdbMovieService>(
+          create: (_) => TmdbMovieService(createTmdbClient()),
+        ),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        home: ChangeNotifierProvider<MovieHomeViewModel>(
+          create: (context) =>
+              MovieHomeViewModel(context.read<TmdbMovieService>())
+                ..loadPopular(),
+          child: const MainShell(),
+        ),
+      ),
     );
   }
 }
@@ -45,7 +65,12 @@ class _MainShellState extends State<MainShell> {
       case 0:
         return const HomeScreen();
       case 1:
-        return const MovieListScreen();
+        return ChangeNotifierProvider<MovieListViewModel>(
+          create: (context) =>
+              MovieListViewModel(context.read<TmdbMovieService>())
+                ..loadInitial(),
+          child: const MovieListScreen(),
+        );
       case 2:
         return const ProfileScreen();
       default:
@@ -95,7 +120,6 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
 
@@ -142,9 +166,7 @@ class StartScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const SignUpScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const SignUpScreen()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
