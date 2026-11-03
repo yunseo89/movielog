@@ -22,7 +22,7 @@ class TmdbMovieDto {
   final double popularity;
 
   factory TmdbMovieDto.fromJson(Map<String, dynamic> json) {
-    final rawGenreIds = json['genre_ids'] as List<dynamic>? ?? const [];
+    final rawGenreIds = json['genre_ids'] as List<dynamic>? ?? const []; // 장르에만 있다?
 
     return TmdbMovieDto(
       id: (json['id'] as num).toInt(),
