@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
+
+import 'data/services/rating_api_service.dart';
+import 'data/services/tmdb_movie_service.dart';
+import 'screens/my_ratings_screen.dart';
+import 'view_models/my_ratings_view_model.dart';
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -66,6 +73,32 @@ class ProfileScreen extends StatelessWidget {
                 Expanded(child: _StatItem(label: '즐겨찾기', value: '58')),
               ],
             ),
+            const SizedBox(height: 24),
+Card( //add
+  child: ListTile(
+    leading: const Icon(Icons.star_outline),
+    title: const Text(
+      '내가 등록한 평점',
+      style: TextStyle(fontWeight: FontWeight.bold),
+    ),
+    subtitle: const Text('내가 남긴 영화 평점을 확인해 보세요.'),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: () {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider<MyRatingsViewModel>(
+            create: (providerContext) => MyRatingsViewModel(
+              providerContext.read<RatingApiService>(),
+              providerContext.read<TmdbMovieService>(),
+              sampleMemberId,
+            )..load(),
+            child: const MyRatingsScreen(),
+          ),
+        ),
+      );
+    },
+  ),
+),
             const SizedBox(height: 28),
             Text(
               '선호하는 장르',
