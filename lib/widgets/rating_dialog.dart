@@ -37,28 +37,26 @@ class _RatingDialogState extends State<RatingDialog> {
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(
-                5,
-                (index) => IconButton(
-                  constraints: const BoxConstraints(
-                    minWidth: 40,
-                    minHeight: 48,
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  tooltip: '${index + 1}점',
-                  onPressed: _isSubmitting
-                      ? null
-                      : () => setState(() => _score = index + 1),
-                  icon: Icon(
-                    index < _score ? Icons.star : Icons.star_border,
-                    color: Colors.deepPurple,
-                  ),
-                ),
-              ),
-            ),
+          children: List.generate(
+  5,
+  (index) => Expanded(
+    child: IconButton(
+      constraints: const BoxConstraints(
+        minWidth: 40,
+        minHeight: 48,
+      ),
+      padding: const EdgeInsets.all(4),
+      tooltip: '${index + 1}점',
+      onPressed: _isSubmitting
+          ? null
+          : () => setState(() => _score = index + 1),
+      icon: Icon(
+        index < _score ? Icons.star : Icons.star_border,
+        color: Colors.deepPurple,
+      ),
+    ),
+  ),
+),
             Text(_score == 0 ? '별점을 선택해 주세요' : '$_score / 5점'),
             const SizedBox(height: 12),
             TextField(
