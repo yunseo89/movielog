@@ -1,0 +1,7 @@
+명령: flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub
+환경: Flutter 3.47.9 / Dart 3.13.7 / JDK 21 / Android SDK 36
+결과:
+Running Gradle task 'assembleDebug'... 11.8s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+
+이 결과는 컴파일·패키징 성공을 뜻합니다. 기기 실행이나 실서버 저장 성공을 의미하지 않습니다.

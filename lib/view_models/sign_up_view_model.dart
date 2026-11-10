@@ -1,20 +1,19 @@
+import '../data/models/create_member_request.dart';
+import '../data/services/api_error.dart';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
-import '../data/services/member_check_service.dart';
+import '../data/services/sign_up_service.dart';
 
-enum CheckStatus {
-  idle,
-  checking,
-  available,
-  duplicated,
-  error,
-}
+enum SubmitStatus { idle, submitting, success, error }
+
+enum CheckStatus { idle, checking, available, duplicated, error }
 
 class SignUpViewModel extends ChangeNotifier {
   SignUpViewModel(this._service);
 
-  final MemberCheckService _service;
+  final SignUpService _service;
 
   CheckStatus nicknameCheckStatus = CheckStatus.idle;
   String? nicknameErrorText;
@@ -29,23 +28,75 @@ class SignUpViewModel extends ChangeNotifier {
   int _emailRequestVersion = 0;
 
   bool _disposed = false;
+  SubmitStatus submitStatus = SubmitStatus.idle;
+  int? createdMemberId;
+  String? passwordErrorText;
+  String? snackbarMessage;
+  bool get isSubmitting => submitStatus == SubmitStatus.submitting;
+  bool get canSubmit =>
+      !isSubmitting &&
+      nicknameCheckStatus == CheckStatus.available &&
+      emailCheckStatus == CheckStatus.available;
+  void onPasswordChanged() {
+    passwordErrorText = null;
+    snackbarMessage = null;
+    if (!_disposed) notifyListeners();
+  }
+
+  Future<void> submit(CreateMemberRequest request) async {
+    if (_disposed ||
+        !canSubmit ||
+        request.nickname.trim() != _currentNickname ||
+        request.email.trim() != _currentEmail) {
+      return;
+    }
+    submitStatus = SubmitStatus.submitting;
+    createdMemberId = null;
+    passwordErrorText = null;
+    snackbarMessage = null;
+    notifyListeners();
+    try {
+      final response = await _service.signUp(request);
+      if (_disposed) return;
+      final id = response.result?.memberId;
+      if (id == null || id <= 0) throw StateError('회원 ID가 없습니다.');
+      createdMemberId = id;
+      submitStatus = SubmitStatus.success;
+    } catch (error) {
+      if (_disposed) return;
+      submitStatus = SubmitStatus.error;
+      final message = apiErrorMessage(error);
+      if (error is DioException &&
+          error.response?.statusCode == 400 &&
+          message.contains('비밀번호')) {
+        passwordErrorText = message;
+      } else {
+        snackbarMessage = message;
+      }
+    }
+    if (!_disposed) notifyListeners();
+  }
 
   bool get canCheckNickname =>
+      !isSubmitting &&
       nicknameCheckStatus != CheckStatus.checking &&
       nicknameCheckStatus != CheckStatus.duplicated;
 
   bool get canCheckEmail =>
+      !isSubmitting &&
       emailCheckStatus != CheckStatus.checking &&
       emailCheckStatus != CheckStatus.duplicated;
 
   void onNicknameChanged(String value) {
+    if (isSubmitting) return;
+    passwordErrorText = null;
+    snackbarMessage = null;
     final trimmed = value.trim();
 
     _currentNickname = trimmed;
     _nicknameRequestVersion++;
 
-    if (_duplicatedNickname != null &&
-        trimmed == _duplicatedNickname) {
+    if (_duplicatedNickname != null && trimmed == _duplicatedNickname) {
       nicknameCheckStatus = CheckStatus.duplicated;
       nicknameErrorText = '이미 사용 중인 닉네임입니다.';
     } else {
@@ -84,9 +135,7 @@ class SignUpViewModel extends ChangeNotifier {
           ? CheckStatus.available
           : CheckStatus.duplicated;
 
-      nicknameErrorText = available
-          ? null
-          : '이미 사용 중인 닉네임입니다.';
+      nicknameErrorText = available ? null : '이미 사용 중인 닉네임입니다.';
 
       if (!available) {
         _duplicatedNickname = requested;
@@ -108,13 +157,15 @@ class SignUpViewModel extends ChangeNotifier {
   }
 
   void onEmailChanged(String value) {
+    if (isSubmitting) return;
+    passwordErrorText = null;
+    snackbarMessage = null;
     final trimmed = value.trim();
 
     _currentEmail = trimmed;
     _emailRequestVersion++;
 
-    if (_duplicatedEmail != null &&
-        trimmed == _duplicatedEmail) {
+    if (_duplicatedEmail != null && trimmed == _duplicatedEmail) {
       emailCheckStatus = CheckStatus.duplicated;
       emailErrorText = '이미 사용 중인 이메일입니다.';
     } else {
@@ -128,9 +179,7 @@ class SignUpViewModel extends ChangeNotifier {
   Future<void> checkEmail(String value) async {
     final requested = value.trim();
 
-    if (requested.isEmpty ||
-        requested != _currentEmail ||
-        !canCheckEmail) {
+    if (requested.isEmpty || requested != _currentEmail || !canCheckEmail) {
       return;
     }
 
@@ -153,9 +202,7 @@ class SignUpViewModel extends ChangeNotifier {
           ? CheckStatus.available
           : CheckStatus.duplicated;
 
-      emailErrorText = available
-          ? null
-          : '이미 사용 중인 이메일입니다.';
+      emailErrorText = available ? null : '이미 사용 중인 이메일입니다.';
 
       if (!available) {
         _duplicatedEmail = requested;

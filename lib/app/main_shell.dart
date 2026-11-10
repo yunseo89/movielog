@@ -8,14 +8,23 @@ import '../view_models/movie_list_view_model.dart';
 import '../data/services/tmdb_movie_service.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  const MainShell({super.key, this.initialIndex = 0});
+
+  final int initialIndex;
 
   @override
   State<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pages[_currentIndex] ??= _pageForIndex(_currentIndex);
+  }
 
   late final List<Widget?> _pages = [
     const HomeScreen(),

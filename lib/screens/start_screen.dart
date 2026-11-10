@@ -21,7 +21,7 @@ class StartScreen extends StatelessWidget {
               Column(
                 children: [
                   const SizedBox(height: 32),
-                  const Text('FLUTTER 1주차'),
+                  const Text('FLUTTER 7주차'),
                   const SizedBox(height: 64),
                   SvgPicture.asset(
                     'assets/logos/movielog_logo.svg',

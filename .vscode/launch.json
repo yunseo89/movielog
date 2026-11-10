@@ -1,0 +1,4 @@
+{
+  "version": "0.2.0",
+  "configurations": [{"name": "MovieLog · Week 7", "request": "launch", "type": "dart", "program": "lib/main.dart"}]
+}
