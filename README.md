@@ -1,2 +1,2 @@
-# MovieLog · Flutter 
-## 프론트 워크북 레포입니다.
+# MovieLog 
+- 프론트(flutter) 워크북 관련 백업 레포입니다.
