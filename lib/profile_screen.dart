@@ -1,3 +1,6 @@
+import 'view_models/learning_member_session.dart';
+import 'sign_up_screen.dart';
+
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
@@ -12,6 +15,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final memberId = context.watch<LearningMemberSession>().memberId;
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -32,8 +36,9 @@ class ProfileScreen extends StatelessWidget {
             const Center(
               child: CircleAvatar(
                 radius: 50,
-                backgroundImage:
-                    AssetImage('assets/images/profile/profile.jpg'),
+                backgroundImage: AssetImage(
+                  'assets/images/profile/profile.jpg',
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -66,39 +71,57 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 28),
             Row(
               children: const [
-                Expanded(child: _StatItem(label: '본 영화', value: '342')),
+                Expanded(
+                  child: _StatItem(label: '본 영화', value: '342'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: _StatItem(label: '평점', value: '4.2')),
+                Expanded(
+                  child: _StatItem(label: '평점', value: '4.2'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: _StatItem(label: '즐겨찾기', value: '58')),
+                Expanded(
+                  child: _StatItem(label: '즐겨찾기', value: '58'),
+                ),
               ],
             ),
             const SizedBox(height: 24),
-Card( //add
-  child: ListTile(
-    leading: const Icon(Icons.star_outline),
-    title: const Text(
-      '내가 등록한 평점',
-      style: TextStyle(fontWeight: FontWeight.bold),
-    ),
-    subtitle: const Text('내가 남긴 영화 평점을 확인해 보세요.'),
-    trailing: const Icon(Icons.chevron_right),
-    onTap: () {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<MyRatingsViewModel>(
-            create: (providerContext) => MyRatingsViewModel(
-              providerContext.read<RatingApiService>(),
-              providerContext.read<TmdbMovieService>(),
-              sampleMemberId,
-            )..load(),
-            child: const MyRatingsScreen(),
-          ),
-        ),
-      );
-    },
-  ),
-),
+            Card(
+              //add
+              child: ListTile(
+                leading: const Icon(Icons.star_outline),
+                title: const Text(
+                  '내가 등록한 평점',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  memberId == null
+                      ? '학습용 회원가입이 필요합니다.'
+                      : '학습용 memberId: $memberId · 인증 상태가 아닙니다.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  if (memberId == null) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ChangeNotifierProvider<MyRatingsViewModel>(
+                            create: (providerContext) => MyRatingsViewModel(
+                              providerContext.read<RatingApiService>(),
+                              providerContext.read<TmdbMovieService>(),
+                              memberId,
+                            )..load(),
+                            child: const MyRatingsScreen(),
+                          ),
+                    ),
+                  );
+                },
+              ),
+            ),
             const SizedBox(height: 28),
             Text(
               '선호하는 장르',

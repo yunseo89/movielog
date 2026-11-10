@@ -1,7 +1,11 @@
+import 'data/models/create_member_request.dart';
+import 'view_models/learning_member_session.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'app/main_shell.dart';
-import 'data/services/member_check_service.dart';
+import 'data/services/sign_up_service.dart';
 import 'view_models/sign_up_view_model.dart';
 import 'widgets/movielog_button.dart';
 
@@ -11,8 +15,7 @@ class SignUpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) =>
-          SignUpViewModel(context.read<MemberCheckService>()),
+      create: (context) => SignUpViewModel(context.read<SignUpService>()),
       child: const _SignUpScreenContent(),
     );
   }
@@ -22,8 +25,7 @@ class _SignUpScreenContent extends StatefulWidget {
   const _SignUpScreenContent();
 
   @override
-  State<_SignUpScreenContent> createState() =>
-      _SignUpScreenContentState();
+  State<_SignUpScreenContent> createState() => _SignUpScreenContentState();
 }
 
 class _SignUpScreenContentState extends State<_SignUpScreenContent> {
@@ -65,50 +67,49 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
 
   bool _isValidEmail(String email) {
     return RegExp(
-      r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
+      r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+$",
     ).hasMatch(email);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    final submitting = context.watch<SignUpViewModel>().isSubmitting;
+    return PopScope(
+      canPop: !submitting,
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          '회원가입',
-          style: TextStyle(
-            color: Colors.deepPurple,
-            fontWeight: FontWeight.bold,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: submitting ? null : () => Navigator.of(context).pop(),
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 16,
+          title: const Text(
+            '회원가입',
+            style: TextStyle(
+              color: Colors.deepPurple,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 40),
-                _buildFormFields(),
-                const SizedBox(height: 40),
-                _buildTermsAndSubmit(),
-                const SizedBox(height: 32), 
-                _buildButtonWidthComparison(),
-              ],
+          centerTitle: true,
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Form(
+              key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 40),
+                  _buildFormFields(),
+                  const SizedBox(height: 40),
+                  _buildTermsAndSubmit(),
+                ],
+              ),
             ),
           ),
         ),
@@ -136,9 +137,9 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
     return Consumer<SignUpViewModel>(
       builder: (context, viewModel, child) {
         final nicknameValid =
-            _nicknameController.text.trim().length >= 2;
-        final emailValid =
-            _isValidEmail(_emailController.text.trim());
+            _nicknameController.text.trim().length >= 2 &&
+            _nicknameController.text.trim().length <= 12;
+        final emailValid = _isValidEmail(_emailController.text.trim());
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,8 +150,9 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
               controller: _nicknameController,
               nextFocus: _emailFocus,
               validator: (value) {
-                if (value == null || value.trim().length < 2) {
-                  return '닉네임은 2자 이상이어야 합니다.';
+                if (value == null ||
+                    (value.trim().length < 2 || value.trim().length > 12)) {
+                  return '닉네임은 2~12자여야 합니다.';
                 }
                 return null;
               },
@@ -159,18 +161,16 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
               onChanged: viewModel.onNicknameChanged,
               trailing: MovieLogButton(
                 label: '중복 확인',
-                isLoading: viewModel.nicknameCheckStatus ==
-                    CheckStatus.checking,
+                isLoading:
+                    viewModel.nicknameCheckStatus == CheckStatus.checking,
                 onPressed: nicknameValid && viewModel.canCheckNickname
-                    ? () => viewModel.checkNickname(
-                          _nicknameController.text,
-                        )
+                    ? () => viewModel.checkNickname(_nicknameController.text)
                     : null,
               ),
               statusMessage:
                   viewModel.nicknameCheckStatus == CheckStatus.available
-                      ? '사용할 수 있는 닉네임입니다.'
-                      : null,
+                  ? '사용할 수 있는 닉네임입니다.'
+                  : null,
             ),
             const SizedBox(height: 24),
             _buildTextFieldWithLabel(
@@ -181,8 +181,7 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
               nextFocus: _passwordFocus,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
-                if (value == null ||
-                    !_isValidEmail(value.trim())) {
+                if (value == null || !_isValidEmail(value.trim())) {
                   return '올바른 이메일 형식이 아닙니다.';
                 }
                 return null;
@@ -192,18 +191,14 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
               onChanged: viewModel.onEmailChanged,
               trailing: MovieLogButton(
                 label: '중복 확인',
-                isLoading: viewModel.emailCheckStatus ==
-                    CheckStatus.checking,
+                isLoading: viewModel.emailCheckStatus == CheckStatus.checking,
                 onPressed: emailValid && viewModel.canCheckEmail
-                    ? () => viewModel.checkEmail(
-                          _emailController.text,
-                        )
+                    ? () => viewModel.checkEmail(_emailController.text)
                     : null,
               ),
-              statusMessage:
-                  viewModel.emailCheckStatus == CheckStatus.available
-                      ? '사용할 수 있는 이메일입니다.'
-                      : null,
+              statusMessage: viewModel.emailCheckStatus == CheckStatus.available
+                  ? '사용할 수 있는 이메일입니다.'
+                  : null,
             ),
             const SizedBox(height: 24),
             _buildTextFieldWithLabel(
@@ -212,13 +207,10 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
               controller: _passwordController,
               focusNode: _passwordFocus,
               obscureText: true,
-              validator: (value) {
-                if (value == null || value.length < 8) {
-                  return '비밀번호는 8자 이상이어야 합니다.';
-                }
-                return null;
-              },
-              isValid: _passwordController.text.length >= 8,
+              validator: validatePasswordFormat,
+              serverErrorText: viewModel.passwordErrorText,
+              onChanged: (_) => viewModel.onPasswordChanged(),
+              isValid: validatePasswordFormat(_passwordController.text) == null,
             ),
           ],
         );
@@ -249,10 +241,7 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Row(
@@ -261,6 +250,7 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
             Expanded(
               child: TextFormField(
                 controller: controller,
+                enabled: !context.watch<SignUpViewModel>().isSubmitting,
                 focusNode: focusNode,
                 keyboardType: keyboardType,
                 obscureText: obscureText,
@@ -298,21 +288,15 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
                       : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(
-                      color: Colors.grey.shade300,
-                    ),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(
-                      color: Colors.grey.shade300,
-                    ),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(
-                      color: Colors.deepPurple,
-                    ),
+                    borderSide: const BorderSide(color: Colors.deepPurple),
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -325,10 +309,7 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
                 ),
               ),
             ),
-            if (trailing != null) ...[
-              const SizedBox(width: 8),
-              trailing,
-            ],
+            if (trailing != null) ...[const SizedBox(width: 8), trailing],
           ],
         ),
         if (statusMessage != null)
@@ -336,10 +317,7 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
             padding: const EdgeInsets.only(top: 6, left: 4),
             child: Text(
               statusMessage,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.deepPurple,
-              ),
+              style: const TextStyle(fontSize: 12, color: Colors.deepPurple),
             ),
           ),
       ],
@@ -352,7 +330,9 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
         final canSubmit =
             _nicknameController.text.trim().length >= 2 &&
             _isValidEmail(_emailController.text.trim()) &&
-            _passwordController.text.length >= 8 &&
+            validatePasswordFormat(_passwordController.text) == null &&
+            _nicknameController.text.trim().length <= 12 &&
+            viewModel.canSubmit &&
             _isAgreed &&
             viewModel.nicknameCheckStatus == CheckStatus.available &&
             viewModel.emailCheckStatus == CheckStatus.available;
@@ -375,28 +355,51 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  '필수 약관에 동의합니다',
-                  style: TextStyle(fontSize: 14),
-                ),
+                const Text('필수 약관에 동의합니다', style: TextStyle(fontSize: 14)),
               ],
             ),
             const SizedBox(height: 24),
             MovieLogButton(
               label: '가입하기',
               width: double.infinity,
+              isLoading: viewModel.isSubmitting,
               onPressed: canSubmit
-    ? () {
-        if (_formKey.currentState!.validate()) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (_) => const MainShell(),
-            ),
-            (route) => false,
-          );
-        }
-      }
-    : null,
+                  ? () async {
+                      if (!_formKey.currentState!.validate()) return;
+                      await viewModel.submit(
+                        CreateMemberRequest(
+                          email: _emailController.text,
+                          password: _passwordController.text,
+                          nickname: _nicknameController.text,
+                        ),
+                      );
+                      if (!context.mounted) return;
+                      final id = viewModel.createdMemberId;
+                      if (viewModel.submitStatus == SubmitStatus.success &&
+                          id != null) {
+                        context.read<LearningMemberSession>().setMemberId(id);
+                        // PopScope가 제출 완료 상태로 재빌드된 뒤 이동합니다.
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!context.mounted) return;
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (_) => const MainShell(initialIndex: 1),
+                            ),
+                            (route) => false,
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('회원가입 완료 · 학습용 memberId: $id'),
+                            ),
+                          );
+                        });
+                      } else if (viewModel.snackbarMessage != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(viewModel.snackbarMessage!)),
+                        );
+                      }
+                    }
+                  : null,
             ),
             const SizedBox(height: 24),
             Row(
@@ -423,50 +426,4 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
       },
     );
   }
-  Widget _buildButtonWidthComparison() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Divider(height: 32),
-      const Text(
-        'MovieLogButton 너비 비교',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      const SizedBox(height: 16),
-
-      const Text('1. width: null (내용 기반)'),
-      const SizedBox(height: 8),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: MovieLogButton(
-          label: '중복 확인',
-          onPressed: () => debugPrint('width: null'),
-        ),
-      ),
-
-      const SizedBox(height: 20),
-
-      const Text('2. width: double.infinity (전체 너비)'),
-      const SizedBox(height: 8),
-      MovieLogButton(
-        label: '전체 너비 버튼',
-        width: double.infinity,
-        onPressed: () => debugPrint('width: double.infinity'),
-      ),
-
-      const SizedBox(height: 20),
-
-      const Text('3. width: 120 (고정 너비)'),
-      const SizedBox(height: 8),
-      MovieLogButton(
-        label: '고정 너비',
-        width: 120,
-        onPressed: () => debugPrint('width: 120'),
-      ),
-    ],
-  );
-}
 }

@@ -1,3 +1,11 @@
+import 'package:provider/provider.dart';
+
+import '../data/services/rating_api_service.dart';
+import '../view_models/learning_member_session.dart';
+import '../view_models/movie_detail_view_model.dart';
+import '../view_models/sign_up_view_model.dart';
+import '../widgets/rating_dialog.dart';
+
 import 'package:flutter/material.dart';
 
 import '../data/models/tmdb_movie_dto.dart';
@@ -15,21 +23,35 @@ class TmdbMovieDetailScreen extends StatelessWidget {
   }
 
   Future<void> _showRatingDialog(BuildContext context) async {
-    final rating = await showDialog<double>(
-      context: context,
-      builder: (_) =>
-          _MovieRatingDialog(movieId: movie.id, movieTitle: movie.title),
+    final vm = MovieDetailViewModel(
+      context.read<RatingApiService>(),
+      context.read<LearningMemberSession>().memberId,
+      movie,
     );
-
-    if (!context.mounted || rating == null) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '영화 ID ${movie.id}: ${rating.toStringAsFixed(1)}점을 선택했어요.',
+    try {
+      final saved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => RatingDialog(
+          onSubmit: (score, comment) async {
+            await vm.createRating(score: score, comment: comment);
+            if (vm.submitStatus != SubmitStatus.success) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(vm.submitMessage ?? '저장 실패')),
+                );
+              }
+              throw StateError(vm.submitMessage ?? '저장 실패');
+            }
+          },
         ),
-      ),
-    );
+      );
+      if (!context.mounted || saved != true) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(vm.submitMessage!)));
+    } finally {
+      vm.dispose();
+    }
   }
 
   @override
@@ -100,52 +122,6 @@ class TmdbMovieDetailScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MovieRatingDialog extends StatefulWidget {
-  const _MovieRatingDialog({required this.movieId, required this.movieTitle});
-
-  final int movieId;
-  final String movieTitle;
-
-  @override
-  State<_MovieRatingDialog> createState() => _MovieRatingDialogState();
-}
-
-class _MovieRatingDialogState extends State<_MovieRatingDialog> {
-  double _rating = 3.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      semanticLabel: '${widget.movieTitle} 영화 ID ${widget.movieId} 평점 선택',
-      title: Text('${widget.movieTitle} 평점'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('${_rating.toStringAsFixed(1)} / 5.0'),
-          Slider(
-            value: _rating,
-            min: 0.5,
-            max: 5,
-            divisions: 9,
-            label: _rating.toStringAsFixed(1),
-            onChanged: (value) => setState(() => _rating = value),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_rating),
-          child: const Text('확인'),
-        ),
-      ],
     );
   }
 }
