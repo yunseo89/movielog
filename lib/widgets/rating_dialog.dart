@@ -34,43 +34,51 @@ class _RatingDialogState extends State<RatingDialog> {
     canPop: !_isSubmitting,
     child: AlertDialog(
       title: const Text('평점을 남겨주세요'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-  5,
-  (index) => Expanded(
-    child: IconButton(
-      constraints: const BoxConstraints(
-        minWidth: 40,
-        minHeight: 48,
-      ),
-      padding: const EdgeInsets.all(4),
-      tooltip: '${index + 1}점',
-      onPressed: _isSubmitting
-          ? null
-          : () => setState(() => _score = index + 1),
-      icon: Icon(
-        index < _score ? Icons.star : Icons.star_border,
-        color: Colors.deepPurple,
-      ),
-    ),
-  ),
-),
-            Text(_score == 0 ? '별점을 선택해 주세요' : '$_score / 5점'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _commentController,
-              maxLines: 3,
-              maxLength: 500,
-              enabled: !_isSubmitting,
-              decoration: const InputDecoration(hintText: '코멘트를 남겨보세요 (선택)'),
+     content: SingleChildScrollView(
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Row(
+        children: List.generate(
+          5,
+          (index) => Expanded(
+            child: IconButton(
+              constraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 48,
+              ),
+              padding: const EdgeInsets.all(4),
+              tooltip: '${index + 1}점',
+              onPressed: _isSubmitting
+                  ? null
+                  : () => setState(() => _score = index + 1),
+              icon: Icon(
+                index < _score ? Icons.star : Icons.star_border,
+                color: Colors.deepPurple,
+              ),
             ),
-            if (_errorText != null)
-              Text(_errorText!, style: const TextStyle(color: Colors.red)),
-          ],
+          ),
         ),
       ),
+      Text(_score == 0 ? '별점을 선택해 주세요' : '$_score / 5점'),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _commentController,
+        maxLines: 3,
+        maxLength: 500,
+        enabled: !_isSubmitting,
+        decoration: const InputDecoration(
+          hintText: '코멘트를 남겨보세요 (선택)',
+        ),
+      ),
+      if (_errorText != null)
+        Text(
+          _errorText!,
+          style: const TextStyle(color: Colors.red),
+        ),
+    ],
+  ),
+),
       actions: [
         MovieLogButton(
           label: '취소',
