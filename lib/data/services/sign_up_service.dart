@@ -10,7 +10,7 @@ class SignUpService {
   final Dio _dio;
   Future<bool> checkNickname(String nickname) async {
     final response = await _dio.get(
-      '/v6/members/nickname/${Uri.encodeComponent(nickname.trim())}',
+      '/v7/members/nickname/${Uri.encodeComponent(nickname.trim())}',
     );
     return CheckResult.fromJson(response.data as Map<String, dynamic>)
         .available;
@@ -18,7 +18,7 @@ class SignUpService {
 
   Future<bool> checkEmail(String email) async {
     final response = await _dio.get(
-      '/v6/members/email/${Uri.encodeComponent(email.trim())}',
+      '/v7/members/email/${Uri.encodeComponent(email.trim())}',
     );
     return CheckResult.fromJson(response.data as Map<String, dynamic>)
         .available;
@@ -27,7 +27,7 @@ class SignUpService {
   Future<CommonResponse<SignUpResult>> signUp(
     CreateMemberRequest request,
   ) async {
-    final response = await _dio.post('/v6/members', data: request.toJson());
+    final response = await _dio.post('/v7/members', data: request.toJson());
     if (response.statusCode != 201) throw StateError('예상하지 못한 가입 응답');
     final result = CommonResponse<SignUpResult>.fromJson(
       response.data as Map<String, dynamic>,

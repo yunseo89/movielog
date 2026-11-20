@@ -1,9 +1,10 @@
+import '../widgets/rating_write_feedback.dart';
+
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../data/services/rating_api_service.dart';
-import '../view_models/learning_member_session.dart';
-import '../view_models/movie_detail_view_model.dart';
-import '../view_models/sign_up_view_model.dart';
+import '../view_models/auth_view_model.dart';
+import '../view_models/session_ratings_view_model.dart';
 import '../widgets/rating_dialog.dart';
 
 import 'package:flutter/material.dart';
@@ -23,35 +24,33 @@ class TmdbMovieDetailScreen extends StatelessWidget {
   }
 
   Future<void> _showRatingDialog(BuildContext context) async {
-    final vm = MovieDetailViewModel(
-      context.read<RatingApiService>(),
-      context.read<LearningMemberSession>().memberId,
-      movie,
+    final vm = context.read<SessionRatingsViewModel>();
+    final auth = context.read<AuthViewModel>();
+    final version = auth.sessionVersion;
+    final saved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => RatingDialog(
+        onSubmit: (score, comment) => reportRatingWrite(
+          context,
+          () => vm.create(movie, score: score, comment: comment),
+        ),
+      ),
     );
-    try {
-      final saved = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => RatingDialog(
-          onSubmit: (score, comment) async {
-            await vm.createRating(score: score, comment: comment);
-            if (vm.submitStatus != SubmitStatus.success) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(vm.submitMessage ?? '저장 실패')),
-                );
-              }
-              throw StateError(vm.submitMessage ?? '저장 실패');
-            }
+    if (!context.mounted || !auth.isSignedInVersion(version) || saved != true) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('평점을 등록했어요.'),
+        action: SnackBarAction(
+          label: '등록한 평점 보기',
+          onPressed: () {
+            if (context.mounted) context.go('/my/ratings');
           },
         ),
-      );
-      if (!context.mounted || saved != true) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(vm.submitMessage!)));
-    } finally {
-      vm.dispose();
-    }
+      ),
+    );
   }
 
   @override

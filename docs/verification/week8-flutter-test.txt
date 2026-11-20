@@ -1,0 +1,57 @@
+00:00 +0: loading /workspace/work/movielog/test/week8_test.dart
+00:00 +0: /workspace/work/movielog/test/week8_test.dart: 로그인 모델은 memberId나 JWT claim을 가정하지 않고 비밀번호를 trim하지 않는다
+00:00 +1: /workspace/work/movielog/test/week8_test.dart: 토큰 없는 복원은 signedOut이며 GET me를 보내지 않는다
+00:00 +2: /workspace/work/movielog/test/week8_test.dart: 저장 토큰 복원은 GET me 완료 전까지 initializing
+00:00 +3: /workspace/work/movielog/test/week8_test.dart: 복원 네트워크 실패는 token 유지 + retryRequired, 재시도 성공
+00:00 +4: /workspace/work/movielog/test/week8_test.dart: 저장소 읽기 실패도 자동 로그아웃하지 않고 재시도
+00:00 +5: /workspace/work/movielog/test/week8_test.dart: 신규 로그인 → 저장 → signedIn → Main의 GET me, 내 정보 중복 로딩 방지
+00:00 +6: /workspace/work/movielog/test/week8_test.dart: 로그인 AUTH401_1은 폼 오류이며 만료 알림이나 logout 없음
+00:00 +7: /workspace/work/movielog/test/week8_test.dart: 실제 연결 오류 타입에서도 프로필·GET me·복원은 토큰을 삭제하지 않는다
+00:00 +8: /workspace/work/movielog/test/week8_test.dart: 토큰 저장 실패는 signedIn으로 가지 않는다
+00:00 +9: /workspace/work/movielog/test/week8_test.dart: 로그인 중 중복 탭은 POST 한 번
+00:00 +10: /workspace/work/movielog/test/week8_test.dart: 보호 AUTH401_2는 토큰·member 삭제 및 만료 알림 1회 소비
+00:00 +11: /workspace/work/movielog/test/week8_test.dart: 보호 AUTH401_3는 토큰·member 삭제 및 만료 알림 1회 소비
+00:00 +12: /workspace/work/movielog/test/week8_test.dart: 보호 AUTH401_4는 토큰·member 삭제 및 만료 알림 1회 소비
+00:00 +13: /workspace/work/movielog/test/week8_test.dart: 직접 로그아웃은 저장소·메모리 삭제하며 만료 안내 없음
+00:00 +14: /workspace/work/movielog/test/week8_test.dart: 동시 401은 한 번만 삭제하고, 오래된 401은 새 세션을 지우지 않는다
+00:00 +15: /workspace/work/movielog/test/week8_test.dart: 진행 중 저장을 기다리고 로그아웃 삭제, 정리 중 로그인 차단
+00:00 +16: /workspace/work/movielog/test/week8_test.dart: 삭제 실패를 성공으로 숨기지 않고 저장소 정리 재시도
+00:00 +17: /workspace/work/movielog/test/week8_test.dart: SerializedTokenStorage는 write 다음 delete 순서를 보장
+00:00 +18: /workspace/work/movielog/test/week8_test.dart: 지연 GET me 응답은 로그아웃 뒤 member에 반영하지 않는다
+00:00 +19: /workspace/work/movielog/test/week8_test.dart: 새 계정 로그인 뒤 이전 요청의 실제 401이 도착해도 새 세션 유지
+00:00 +20: /workspace/work/movielog/test/week8_test.dart: Bearer는 승인된 origin·메서드·path에만 부착, 공개/외부/redirect 차단
+00:00 +21: /workspace/work/movielog/test/week8_test.dart: 보호 요청의 secure storage 읽기 실패는 서버 401이 아니며 세션 유지
+00:00 +22: /workspace/work/movielog/test/week8_test.dart: v7 등록/수정 Rating 파싱, 명시적 comment null, 삭제 200 wrapper, 공개 조회 무토큰
+00:00 +23: /workspace/work/movielog/test/week8_test.dart: 삭제는 과거 204 응답을 성공으로 처리하지 않는다
+00:00 +24: /workspace/work/movielog/test/week8_test.dart: 세션 평점은 등록/PATCH 응답으로 갱신, DELETE로 제거, 전체 GET 추정 없음
+00:00 +25: /workspace/work/movielog/test/week8_test.dart: RATING403_1는 입력 오류 안내만, 자동 로그아웃 없음
+00:00 +26: /workspace/work/movielog/test/week8_test.dart: RATING409_1는 입력 오류 안내만, 자동 로그아웃 없음
+00:00 +27: /workspace/work/movielog/test/week8_test.dart: 없는 평점 RATING404_1은 세션의 해당 카드만 제거
+00:00 +28: /workspace/work/movielog/test/week8_test.dart: 계정 전환은 세션 평점을 비우고 이전 등록 결과를 버린다
+00:00 +29: /workspace/work/movielog/test/week8_test.dart: 프로필 길이·변경 없음은 PATCH 생략, 성공 member 즉시 교체
+00:00 +30: /workspace/work/movielog/test/week8_test.dart: 프로필 MEMBER409_1: 입력/중복은 필드 오류, 통신 실패는 재시도, 로그인 유지
+00:00 +31: /workspace/work/movielog/test/week8_test.dart: 프로필 COMMON400: 입력/중복은 필드 오류, 통신 실패는 재시도, 로그인 유지
+00:00 +32: /workspace/work/movielog/test/week8_test.dart: 프로필 COMMON503: 입력/중복은 필드 오류, 통신 실패는 재시도, 로그인 유지
+00:00 +33: /workspace/work/movielog/test/week8_test.dart: 늦은 프로필 PATCH 응답은 새 회원 정보를 덮지 않는다
+00:00 +34: /workspace/work/movielog/test/week8_test.dart: 프로필 수정 전에 시작한 GET me는 늦게 도착해도 새 닉네임을 덮지 않는다
+00:00 +35: /workspace/work/movielog/test/week8_test.dart: 모든 보호 경로 redirect와 공개 가입 경로, 초기화/실패 스플래시
+00:00 +36: /workspace/work/movielog/test/week8_test.dart: SecureTokenStorage write/read/delete 플러그인 호출 계약 (OS 보안 검증과 별개)
+00:00 +37: /workspace/work/movielog/test/week8_test.dart: 작은 화면 320.0 평점 Dialog 별 5개와 키보드 입력
+00:02 +38: /workspace/work/movielog/test/week8_test.dart: 작은 화면 360.0 평점 Dialog 별 5개와 키보드 입력
+00:02 +39: /workspace/work/movielog/test/week8_test.dart: 평점 403은 Dialog 입력 유지와 Snackbar 안내, 로그아웃 없음
+00:03 +40: /workspace/work/movielog/test/week8_test.dart: 프로필 중복 입력 유지·이메일 읽기 전용·저장 성공 즉시 반영
+00:03 +41: /workspace/work/movielog/test/week8_test.dart: Router 로그인 화면·만료 Snackbar 1회·로그아웃 보호 화면 차단
+00:04 +42: loading /workspace/work/movielog/test/week7_test.dart
+00:05 +42: /workspace/work/movielog/test/week7_test.dart: 요청 JSON은 비밀번호를 변경하지 않고 정수 score와 실제 TMDB id를 보낸다
+00:05 +43: /workspace/work/movielog/test/week7_test.dart: 가입 400 비밀번호 형식 오류: 필드 오류와 Snackbar 분리
+00:05 +44: /workspace/work/movielog/test/week7_test.dart: 가입 400 이메일 형식 오류: 필드 오류와 Snackbar 분리
+00:05 +45: /workspace/work/movielog/test/week7_test.dart: 가입 409 이미 사용 중인 이메일입니다.: 필드 오류와 Snackbar 분리
+00:05 +46: /workspace/work/movielog/test/week7_test.dart: 최종 POST 409와 GET available=false는 별도 상태
+00:05 +47: /workspace/work/movielog/test/week7_test.dart: 가입 통신 실패와 중복 상태 구별
+00:05 +48: /workspace/work/movielog/test/week7_test.dart: 가입 중 연속 탭 방지, 성공 memberId 저장
+00:05 +49: /workspace/work/movielog/test/week7_test.dart: 가입 결과 memberId null은 성공 처리하지 않는다
+00:05 +50: /workspace/work/movielog/test/week7_test.dart: 입력 변경 뒤 늦게 도착한 중복 확인 응답 무시
+00:05 +51: /workspace/work/movielog/test/week7_test.dart: 별점 미선택 시 확인 비활성, 실패 시 입력 유지, 요청 중 이탈 방지
+00:07 +52: /workspace/work/movielog/test/week7_test.dart: 수정 Dialog 기존 별점·코멘트 초기값과 성공 후 닫기
+00:07 +53: /workspace/work/movielog/test/week7_test.dart: 삭제 취소는 API를 호출하지 않고, 삭제 중에는 Dialog 유지
+00:07 +54: All tests passed!

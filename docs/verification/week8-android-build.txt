@@ -1,0 +1,8 @@
+명령: flutter build apk --release --target-platform android-arm64 --no-pub
+환경: Flutter 3.47.9 / Dart 3.13.7 / JDK 21 / Android SDK 36
+결과:
+Running Gradle task 'assembleRelease'... 518.8s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (21.0MB)
+
+컴파일·패키징 성공 기록이며 Android 기기 실행이나 Keystore 실제 동작 검증을 의미하지 않습니다.
+기존 Android 프로젝트의 개발용 서명 설정으로 빌드했으며 배포용 서명 설정을 추가하지 않았습니다.
