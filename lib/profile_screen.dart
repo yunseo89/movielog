@@ -1,199 +1,84 @@
-import 'view_models/learning_member_session.dart';
-import 'sign_up_screen.dart';
-
 import 'package:flutter/material.dart';
-
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import 'data/services/rating_api_service.dart';
-import 'data/services/tmdb_movie_service.dart';
-import 'screens/my_ratings_screen.dart';
-import 'view_models/my_ratings_view_model.dart';
+import 'view_models/auth_view_model.dart';
+import 'view_models/session_ratings_view_model.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
-    final memberId = context.watch<LearningMemberSession>().memberId;
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '내 프로필',
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colors.primary,
-              ),
-            ),
-            const SizedBox(height: 28),
-            const Center(
-              child: CircleAvatar(
-                radius: 50,
+    final auth = context.watch<AuthViewModel>();
+    final member = auth.member;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('마이페이지'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: '로그아웃',
+            onPressed: auth.storageCleanupInProgress ? null : auth.logout,
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const CircleAvatar(
+                radius: 48,
                 backgroundImage: AssetImage(
                   'assets/images/profile/profile.jpg',
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                '무비러버',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 20),
+              Text(
+                member?.nickname ??
+                    (auth.memberStatus == MemberLoadStatus.error
+                        ? '내 정보를 확인해 주세요.'
+                        : '내 정보를 불러오는 중이에요.'),
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              if (member != null) Text(member.email),
+              if (auth.memberStatus == MemberLoadStatus.error) ...[
+                const SizedBox(height: 12),
+                Text(auth.message ?? '내 정보를 불러오지 못했어요.'),
+                TextButton(
+                  onPressed: () => auth.loadMember(force: true),
+                  child: const Text('내 정보 다시 불러오기'),
+                ),
+              ],
+              const SizedBox(height: 20),
+              OutlinedButton(
+                onPressed: member == null
+                    ? null
+                    : () => context.push('/my/profile/edit'),
+                child: const Text('프로필 수정'),
+              ),
+              const SizedBox(height: 24),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.star_outline),
+                  title: const Text('이번 로그인에서 등록한 평점'),
+                  subtitle: Text(
+                    '${context.watch<SessionRatingsViewModel>().ratings.length}개',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/my/ratings'),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Center(
-              child: Text(
-                '매주 주말엔 영화관으로 출근하는 프로 관람객.\n좋은 영화를 보고 기록하는 것을 좋아합니다.',
-                textAlign: TextAlign.center,
+              const SizedBox(height: 12),
+              const Text(
+                '앱을 다시 실행하거나 로그아웃하면 이 목록은 비워집니다. 저장한 평점은 서버에 남아 있습니다.',
                 style: TextStyle(color: Colors.grey),
               ),
-            ),
-            const SizedBox(height: 22),
-            Center(
-              child: SizedBox(
-                width: 150,
-                child: OutlinedButton(
-                  onPressed: () {},
-                  child: const Text('프로필 수정'),
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-            Row(
-              children: const [
-                Expanded(
-                  child: _StatItem(label: '본 영화', value: '342'),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: _StatItem(label: '평점', value: '4.2'),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: _StatItem(label: '즐겨찾기', value: '58'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Card(
-              //add
-              child: ListTile(
-                leading: const Icon(Icons.star_outline),
-                title: const Text(
-                  '내가 등록한 평점',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  memberId == null
-                      ? '학습용 회원가입이 필요합니다.'
-                      : '학습용 memberId: $memberId · 인증 상태가 아닙니다.',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  if (memberId == null) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SignUpScreen()),
-                    );
-                    return;
-                  }
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ChangeNotifierProvider<MyRatingsViewModel>(
-                            create: (providerContext) => MyRatingsViewModel(
-                              providerContext.read<RatingApiService>(),
-                              providerContext.read<TmdbMovieService>(),
-                              memberId,
-                            )..load(),
-                            child: const MyRatingsScreen(),
-                          ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 28),
-            Text(
-              '선호하는 장르',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: const [
-                _GenreChip('드라마'),
-                _GenreChip('SF'),
-                _GenreChip('애니메이션'),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  const _StatItem({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 15),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12)),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GenreChip extends StatelessWidget {
-  const _GenreChip(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(label),
     );
   }
 }

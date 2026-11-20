@@ -1,42 +1,30 @@
 import 'package:dio/dio.dart';
 
-import '../models/common_response.dart';
 import '../models/rating_dto.dart';
 import '../models/rating_request.dart';
-import 'api_error.dart';
+import 'response_parser.dart';
 
 class RatingApiService {
-  RatingApiService(this._dio);
-  final Dio _dio;
+  RatingApiService(this._publicDio, this._authDio);
+  final Dio _publicDio;
+  final Dio _authDio;
   Future<List<RatingDto>> fetchMyRatings(int memberId) async {
-    final response = await _dio.get('/v6/members/$memberId/ratings');
-    return (response.data as List<dynamic>)
-        .map((item) => RatingDto.fromJson(item as Map<String, dynamic>))
+    final response = await _publicDio.get('/v7/members/$memberId/ratings');
+    if (response.statusCode != 200 || response.data is! List) {
+      throw StateError('공개 평점 조회 응답 오류');
+    }
+    return (response.data as List)
+        .map((e) => RatingDto.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
-  void _checkWrite(Response<dynamic> response, int status) {
-    if (response.statusCode != status) throw StateError('예상하지 못한 평점 응답');
-    final common = CommonResponse<Object?>.fromJson(
-      response.data as Map<String, dynamic>,
-      (value) => value,
-    );
-    if (!common.isSuccess) throw StateError('평점 응답 실패');
-  }
-
-  Future<void> createRating({
-    required int memberId,
-    required CreateRatingRequest request,
-  }) async {
-    final response = await _dio.post(
-      '/v6/members/$memberId/ratings',
-      data: request.toJson(),
-    );
-    _checkWrite(response, 201); // result는 숫자 또는 null일 수 있어 캐스팅하지 않습니다.
-  }
-
-  Future<void> updateRating({
-    required int memberId,
+  Future<RatingDto> createRating(CreateRatingRequest request) async =>
+      parseResult(
+        await _authDio.post('/v7/ratings', data: request.toJson()),
+        201,
+        (v) => RatingDto.fromJson(v as Map<String, dynamic>),
+      );
+  Future<RatingDto> updateRating({
     required int ratingId,
     required int score,
     String? comment,
@@ -44,26 +32,19 @@ class RatingApiService {
     validateServerScore(score.toDouble());
     final trimmed = comment?.trim();
     if ((trimmed?.length ?? 0) > 500) throw ArgumentError('코멘트는 500자 이하입니다.');
-    final response = await _dio.patch(
-      '/v6/members/$memberId/ratings/$ratingId',
-      data: {
-        'score': score,
-        'comment': trimmed == null || trimmed.isEmpty ? null : trimmed,
-      },
+    return parseResult(
+      await _authDio.patch(
+        '/v7/ratings/$ratingId',
+        data: {
+          'score': score,
+          'comment': trimmed == null || trimmed.isEmpty ? null : trimmed,
+        },
+      ),
+      200,
+      (v) => RatingDto.fromJson(v as Map<String, dynamic>),
     );
-    _checkWrite(response, 200);
   }
 
-  Future<void> deleteRating({
-    required int memberId,
-    required int ratingId,
-  }) async {
-    final response = await _dio.delete(
-      '/v6/members/$memberId/ratings/$ratingId',
-    );
-    if (response.statusCode != 204) throw StateError('예상하지 못한 삭제 응답');
-    // 204 응답에는 본문이 없습니다.
-  }
+  Future<void> deleteRating(int ratingId) async =>
+      parseEmptyResult(await _authDio.delete('/v7/ratings/$ratingId'));
 }
-
-String writeMyRatingsErrorMessage(DioException error) => apiErrorMessage(error);

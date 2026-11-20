@@ -1,10 +1,10 @@
 import 'data/models/create_member_request.dart';
-import 'view_models/learning_member_session.dart';
+
+import 'package:go_router/go_router.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'app/main_shell.dart';
 import 'data/services/sign_up_service.dart';
 import 'view_models/sign_up_view_model.dart';
 import 'widgets/movielog_button.dart';
@@ -83,7 +83,15 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: submitting ? null : () => Navigator.of(context).pop(),
+            onPressed: submitting
+                ? null
+                : () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/login');
+                    }
+                  },
           ),
           title: const Text(
             '회원가입',
@@ -377,19 +385,12 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
                       final id = viewModel.createdMemberId;
                       if (viewModel.submitStatus == SubmitStatus.success &&
                           id != null) {
-                        context.read<LearningMemberSession>().setMemberId(id);
-                        // PopScope가 제출 완료 상태로 재빌드된 뒤 이동합니다.
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (!context.mounted) return;
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (_) => const MainShell(initialIndex: 1),
-                            ),
-                            (route) => false,
-                          );
+                          context.go('/login');
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('회원가입 완료 · 학습용 memberId: $id'),
+                            const SnackBar(
+                              content: Text('회원가입이 완료됐어요. 로그인해 주세요.'),
                             ),
                           );
                         });
@@ -410,7 +411,9 @@ class _SignUpScreenContentState extends State<_SignUpScreenContent> {
                   style: TextStyle(color: Colors.black54),
                 ),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: viewModel.isSubmitting
+                      ? null
+                      : () => context.go('/login'),
                   child: const Text(
                     '로그인',
                     style: TextStyle(

@@ -1,10 +1,10 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/models/tmdb_movie_dto.dart';
 import '../view_models/movie_list_view_model.dart';
 import '../widgets/tmdb_poster_image.dart';
-import 'tmdb_movie_detail_screen.dart';
 
 class MovieListScreen extends StatelessWidget {
   const MovieListScreen({super.key});
@@ -154,11 +154,7 @@ class _TmdbMovieCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => TmdbMovieDetailScreen(movie: movie),
-          ),
-        );
+        context.push('/movie/${movie.id}', extra: movie);
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
