@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/session_ratings_view_model.dart';
 import '../widgets/rating_dialog.dart';
+import '../widgets/favorite_button.dart';
 
 import 'package:flutter/material.dart';
 
@@ -78,11 +79,18 @@ class TmdbMovieDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    movie.title,
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          movie.title,
+                          style: textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const FavoriteButton(),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(_releaseDate),

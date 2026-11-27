@@ -75,6 +75,14 @@ class ProfileScreen extends StatelessWidget {
                 '앱을 다시 실행하거나 로그아웃하면 이 목록은 비워집니다. 저장한 평점은 서버에 남아 있습니다.',
                 style: TextStyle(color: Colors.grey),
               ),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.bookmark_outline),
+                  title: const Text('내 즐겨찾기'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/my/favorites'),
+                ),
+              ),
             ],
           ),
         ),

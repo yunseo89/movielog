@@ -1,4 +1,6 @@
 import 'package:movielog/screens/tmdb_movie_detail_screen.dart';
+import 'package:movielog/data/services/favorite_api_service.dart';
+import 'package:movielog/view_models/favorite_detail_view_model.dart';
 import 'package:movielog/widgets/rating_dialog.dart';
 import 'package:movielog/theme/app_theme.dart';
 
@@ -224,7 +226,7 @@ void main() {
     await h.auth.loadMember();
     expect(h.auth.member, isNotNull);
     expect(h.protectedAdapter.requests.length, 1);
-    expect(h.publicAdapter.requests.single.path, '/v7/auth/login');
+    expect(h.publicAdapter.requests.single.path, '/v8/auth/login');
     expect(
       h.publicAdapter.requests.single.headers.containsKey('Authorization'),
       isFalse,
@@ -405,7 +407,7 @@ void main() {
     addTearDown(h.dispose);
     await h.login();
     wait = true;
-    final old = h.protectedDio.get('/v7/members/me');
+    final old = h.protectedDio.get('/v8/members/me');
     await started.future;
     await h.auth.logout();
     wait = false;
@@ -420,12 +422,12 @@ void main() {
     addTearDown(h.dispose);
     await h.login();
     for (final path in [
-      '/v7/auth/login',
-      '/v7/members/42/ratings',
-      '/v7/ratings-extra',
-      'https://external.invalid/v7/members/me',
-      'http://workbook.devnoco.com/v7/members/me',
-      'https://workbook.devnoco.com:444/v7/members/me',
+      '/v8/auth/login',
+      '/v8/members/42/ratings',
+      '/v8/ratings-extra',
+      'https://external.invalid/v8/members/me',
+      'http://workbook.devnoco.com/v8/members/me',
+      'https://workbook.devnoco.com:444/v8/members/me',
     ]) {
       await h.protectedDio.get(
         path,
@@ -438,7 +440,7 @@ void main() {
         isFalse,
       );
     }
-    await h.protectedDio.get('/v7/members/me');
+    await h.protectedDio.get('/v8/members/me');
     expect(
       h.protectedAdapter.requests.last.headers['Authorization'],
       isNotNull,
@@ -451,14 +453,14 @@ void main() {
     await h.login();
     h.storage.failRead = true;
     await expectLater(
-      h.protectedDio.get('/v7/members/me'),
+      h.protectedDio.get('/v8/members/me'),
       throwsA(isA<DioException>()),
     );
     expect(h.auth.status, AuthStatus.signedIn);
     expect(h.storage.deletes, 0);
   });
   test(
-    'v7 등록/수정 Rating 파싱, 명시적 comment null, 삭제 200 wrapper, 공개 조회 무토큰',
+    'v8 등록/수정 Rating 파싱, 명시적 comment null, 삭제 200 wrapper, 공개 조회 무토큰',
     () async {
       final h = Harness(
         publicReply: (_) => fixture.jsonReply([rated()], 200),
@@ -471,7 +473,7 @@ void main() {
         const CreateRatingRequest(movieId: 550, score: 4),
       );
       expect(created.ratingId, 91);
-      expect(h.protectedAdapter.requests.last.path, '/v7/ratings');
+      expect(h.protectedAdapter.requests.last.path, '/v8/ratings');
       expect(h.protectedAdapter.requests.last.data, {
         'movieId': 550,
         'score': 4,
@@ -775,6 +777,15 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
+          ChangeNotifierProvider(
+            create: (_) => FavoriteDetailViewModel(
+              movieId: fixture.movie.id,
+              favoriteApi: FavoriteApiService(h.protectedDio),
+              auth: h.auth,
+              version: h.auth.sessionVersion,
+            ),
+          ),
+
           ChangeNotifierProvider<AuthViewModel>.value(value: h.auth),
           ChangeNotifierProvider<SessionRatingsViewModel>.value(
             value: h.ratings,
