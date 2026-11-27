@@ -23,10 +23,14 @@ class AuthInterceptor extends Interceptor {
         uri.port == origin.port;
     final method = o.method.toUpperCase();
     return trusted &&
-        ((uri.path == '/v7/members/me' &&
+        ((uri.path == '/v8/members/me' &&
                 const {'GET', 'PATCH'}.contains(method)) ||
-            (uri.path == '/v7/ratings' && method == 'POST') ||
-            (RegExp(r'^/v7/ratings/[1-9][0-9]*$').hasMatch(uri.path) &&
+            (uri.path == '/v8/favorites' &&
+                const {'GET', 'POST'}.contains(method)) ||
+            (RegExp(r'^/v8/favorites/[1-9][0-9]*$').hasMatch(uri.path) &&
+                const {'GET', 'DELETE'}.contains(method)) ||
+            (uri.path == '/v8/ratings' && method == 'POST') ||
+            (RegExp(r'^/v8/ratings/[1-9][0-9]*$').hasMatch(uri.path) &&
                 const {'PATCH', 'DELETE'}.contains(method)));
   }
 

@@ -2,9 +2,12 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data/models/tmdb_movie_dto.dart';
-import '../view_models/movie_list_view_model.dart';
-import '../widgets/tmdb_poster_image.dart';
+import '../data/services/tmdb_movie_service.dart';
+import '../data/models/tmdb_genre_dto.dart';
+import '../widgets/movie_page_footer.dart';
+import '../view_models/load_phase.dart';
+import '../view_models/paged_movies_view_model.dart';
+import '../widgets/tmdb_movie_card.dart';
 
 class MovieListScreen extends StatelessWidget {
   const MovieListScreen({super.key});
@@ -31,90 +34,45 @@ class MovieListScreen extends StatelessWidget {
             actions: [
               IconButton(
                 tooltip: '검색',
-                onPressed: () {},
+                onPressed: () => context.push('/movies/search'),
                 icon: const Icon(Icons.search),
               ),
             ],
           ),
-          SliverToBoxAdapter(
-            child: Consumer<MovieListViewModel>(
-              builder: (context, viewModel, _) {
-                final isLoading = viewModel.isLoading;
-                return SizedBox(
-                  height: 52,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: viewModel.genres.length + 1,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return ChoiceChip(
-                          label: const Text('전체'),
-                          selected: viewModel.selectedGenreId == null,
-                          onSelected: isLoading
-                              ? null
-                              : (selected) {
-                                  if (selected) {
-                                    context
-                                        .read<MovieListViewModel>()
-                                        .selectGenre(null);
-                                  }
-                                },
-                        );
-                      }
-
-                      final genre = viewModel.genres[index - 1];
-                      return ChoiceChip(
-                        label: Text(genre.name),
-                        selected: viewModel.selectedGenreId == genre.id,
-                        onSelected: isLoading
-                            ? null
-                            : (selected) {
-                                if (selected) {
-                                  context
-                                      .read<MovieListViewModel>()
-                                      .selectGenre(genre.id);
-                                }
-                              },
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
+          SliverToBoxAdapter(child: const _GenreChips()),
           const SliverToBoxAdapter(child: SizedBox(height: 14)),
-          Consumer<MovieListViewModel>(
+          Consumer<PagedMoviesViewModel>(
             builder: (context, viewModel, _) {
-              switch (viewModel.status) {
-                case MovieListLoadStatus.idle:
-                case MovieListLoadStatus.loading:
+              switch (viewModel.phase) {
+                case LoadPhase.idle:
+                case LoadPhase.loading:
                   return const SliverFillRemaining(
                     hasScrollBody: false,
                     child: _LoadingState(),
                   );
-                case MovieListLoadStatus.error:
+                case LoadPhase.error:
                   return SliverFillRemaining(
                     hasScrollBody: false,
                     child: _ErrorState(
                       message:
-                          viewModel.message ?? '영화를 불러오지 못했어요. 다시 시도해 주세요.',
-                      onRetry: () => context.read<MovieListViewModel>().retry(),
+                          viewModel.errorMessage ??
+                          '영화를 불러오지 못했어요. 다시 시도해 주세요.',
+                      onRetry: () =>
+                          context.read<PagedMoviesViewModel>().retry(),
                     ),
                   );
-                case MovieListLoadStatus.empty:
+                case LoadPhase.empty:
                   return const SliverFillRemaining(
                     hasScrollBody: false,
                     child: _EmptyState(),
                   );
-                case MovieListLoadStatus.success:
+                case LoadPhase.ready:
                   return SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     sliver: SliverGrid(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) =>
-                            _TmdbMovieCard(movie: viewModel.movies[index]),
+                            TmdbMovieCard(movie: viewModel.movies[index]),
                         childCount: viewModel.movies.length,
                       ),
                       gridDelegate:
@@ -129,70 +87,12 @@ class MovieListScreen extends StatelessWidget {
               }
             },
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TmdbMovieCard extends StatelessWidget {
-  const _TmdbMovieCard({required this.movie});
-
-  final TmdbMovieDto movie;
-
-  String get _releaseYear {
-    final date = movie.releaseDate;
-    if (date == null || date.length < 4) return '개봉일 미정';
-    return date.substring(0, 4);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () {
-        context.push('/movie/${movie.id}', extra: movie);
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: 0.68,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: TmdbPosterImage(
-                posterPath: movie.posterPath,
-                width: double.infinity,
-                height: 250,
-              ),
+          SliverToBoxAdapter(
+            child: Consumer<PagedMoviesViewModel>(
+              builder: (_, vm, _) => vm.phase == LoadPhase.ready
+                  ? MoviePageFooter(vm: vm)
+                  : const SizedBox.shrink(),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            movie.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 3),
-          Row(
-            children: [
-              Icon(Icons.star_rounded, size: 16, color: colors.primary),
-              const SizedBox(width: 3),
-              Text(movie.voteAverage.toStringAsFixed(1)),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  _releaseYear,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -262,6 +162,55 @@ class _ErrorState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _GenreChips extends StatefulWidget {
+  const _GenreChips();
+  @override
+  State<_GenreChips> createState() => _GenreChipsState();
+}
+
+class _GenreChipsState extends State<_GenreChips> {
+  late Future<List<TmdbGenreDto>> genres = context
+      .read<TmdbMovieService>()
+      .fetchGenres();
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<PagedMoviesViewModel>();
+    return FutureBuilder<List<TmdbGenreDto>>(
+      future: genres,
+      builder: (_, snap) {
+        if (snap.hasError) {
+          return TextButton(
+            onPressed: () => setState(() {
+              genres = context.read<TmdbMovieService>().fetchGenres();
+            }),
+            child: const Text('장르 다시 조회'),
+          );
+        }
+        final choices = <TmdbGenreDto?>[null, ...?snap.data];
+        return SizedBox(
+          height: 52,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: choices.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (_, index) {
+              final genre = choices[index];
+              return ChoiceChip(
+                label: Text(genre?.name ?? '전체'),
+                selected: vm.selectedGenreId == genre?.id,
+                onSelected: (selected) {
+                  if (selected) vm.loadInitial(genreId: genre?.id);
+                },
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

@@ -17,7 +17,12 @@ import '../screens/edit_profile_screen.dart';
 import '../screens/tmdb_movie_detail_screen.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/edit_profile_view_model.dart';
-import '../view_models/movie_list_view_model.dart';
+import '../view_models/paged_movies_view_model.dart';
+import '../view_models/favorites_view_model.dart';
+import '../view_models/favorite_detail_view_model.dart';
+import '../screens/favorites_screen.dart';
+import '../screens/movie_search_screen.dart';
+import '../data/services/favorite_api_service.dart';
 
 String? authRedirect(AuthStatus status, String location) {
   final start = location == '/start';
@@ -57,16 +62,49 @@ GoRouter createAppRouter(AuthViewModel auth) {
           GoRoute(
             path: '/movies',
             builder: (context, _) => ChangeNotifierProvider(
-              create: (_) =>
-                  MovieListViewModel(context.read<TmdbMovieService>())
-                    ..loadInitial(),
+              create: (_) => PagedMoviesViewModel(
+                tmdbApi: context.read<TmdbMovieService>(),
+              )..loadInitial(),
               child: const MovieListScreen(),
             ),
+            routes: [
+              GoRoute(
+                path: 'search',
+                parentNavigatorKey: rootKey,
+                builder: (context, _) => ChangeNotifierProvider(
+                  key: ValueKey(auth.sessionVersion),
+                  create: (_) => PagedMoviesViewModel(
+                    tmdbApi: context.read<TmdbMovieService>(),
+                  ),
+                  child: MovieSearchScreen(
+                    onOpenMovie: (movie) =>
+                        context.push<void>('/movie/${movie.id}', extra: movie),
+                  ),
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: '/my',
             builder: (_, _) => const ProfileScreen(),
             routes: [
+              GoRoute(
+                path: 'favorites',
+                parentNavigatorKey: rootKey,
+                builder: (context, _) => ChangeNotifierProvider(
+                  key: ValueKey(auth.sessionVersion),
+                  create: (_) => FavoritesViewModel(
+                    favoriteApi: context.read<FavoriteApiService>(),
+                    tmdbApi: context.read<TmdbMovieService>(),
+                    auth: auth,
+                    version: auth.sessionVersion,
+                  ),
+                  child: FavoritesScreen(
+                    onOpenMovie: (movie) =>
+                        context.push<void>('/movie/${movie.id}', extra: movie),
+                  ),
+                ),
+              ),
               GoRoute(
                 path: 'ratings',
                 parentNavigatorKey: rootKey,
@@ -83,7 +121,7 @@ GoRouter createAppRouter(AuthViewModel auth) {
       ),
       GoRoute(
         path: '/movie/:id',
-        builder: (_, state) {
+        builder: (context, state) {
           final movie = state.extra;
           if (movie is! TmdbMovieDto) {
             return Scaffold(
@@ -91,7 +129,16 @@ GoRouter createAppRouter(AuthViewModel auth) {
               body: const Center(child: Text('영화 목록에서 다시 선택해 주세요.')),
             );
           }
-          return TmdbMovieDetailScreen(movie: movie);
+          return ChangeNotifierProvider(
+            key: ValueKey((auth.sessionVersion, movie.id)),
+            create: (_) => FavoriteDetailViewModel(
+              movieId: movie.id,
+              favoriteApi: context.read<FavoriteApiService>(),
+              auth: auth,
+              version: auth.sessionVersion,
+            )..load(),
+            child: TmdbMovieDetailScreen(movie: movie),
+          );
         },
       ),
     ],

@@ -7,12 +7,12 @@ class MemberApiService {
   MemberApiService(this._authDio);
   final Dio _authDio;
   Future<MemberInfo> fetchMe() async => parseResult(
-    await _authDio.get('/v7/members/me'),
+    await _authDio.get('/v8/members/me'),
     200,
     (v) => MemberInfo.fromJson(v as Map<String, dynamic>),
   );
   Future<MemberInfo> updateNickname(String nickname) async => parseResult(
-    await _authDio.patch('/v7/members/me', data: {'nickname': nickname.trim()}),
+    await _authDio.patch('/v8/members/me', data: {'nickname': nickname.trim()}),
     200,
     (v) => MemberInfo.fromJson(v as Map<String, dynamic>),
   );

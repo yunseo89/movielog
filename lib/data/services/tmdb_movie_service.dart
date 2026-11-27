@@ -9,20 +9,13 @@ class TmdbMovieService {
 
   final Dio _dio;
 
-  Future<TmdbMoviePageDto> fetchPopular({
-    int page = 1,
-  }) async {
+  Future<TmdbMoviePageDto> fetchPopular({int page = 1}) async {
     final response = await _dio.get(
       '/movie/popular',
-      queryParameters: {
-        'language': 'ko-KR',
-        'page': page,
-      },
+      queryParameters: {'language': 'ko-KR', 'page': page},
     );
 
-    return TmdbMoviePageDto.fromJson(
-      response.data as Map<String, dynamic>,
-    );
+    return TmdbMoviePageDto.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<TmdbMoviePageDto> discoverMovies({
@@ -41,28 +34,36 @@ class TmdbMovieService {
       },
     );
 
-    return TmdbMoviePageDto.fromJson(
-      response.data as Map<String, dynamic>,
+    return TmdbMoviePageDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<TmdbMoviePageDto> searchMovies({
+    required int page,
+    required String query,
+  }) async {
+    final response = await _dio.get(
+      '/search/movie',
+      queryParameters: {
+        'query': query,
+        'page': page,
+        'language': 'ko-KR',
+        'include_adult': false,
+      },
     );
+    return TmdbMoviePageDto.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<List<TmdbGenreDto>> fetchGenres() async {
     final response = await _dio.get(
       '/genre/movie/list',
-      queryParameters: {
-        'language': 'ko',
-      },
+      queryParameters: {'language': 'ko'},
     );
 
     final data = response.data as Map<String, dynamic>;
     final genres = data['genres'] as List<dynamic>? ?? const [];
 
     return genres
-        .map(
-          (item) => TmdbGenreDto.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
+        .map((item) => TmdbGenreDto.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
@@ -72,9 +73,7 @@ class TmdbMovieService {
       queryParameters: {'language': 'ko-KR'},
     );
 
-    return TmdbMovieDto.fromJson(
-      response.data as Map<String, dynamic>,
-    );
+    return TmdbMovieDto.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<TmdbMovieDto?> findMovieById(int movieId) async {

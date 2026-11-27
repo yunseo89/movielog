@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../core/network/movie_log_client.dart';
 import '../core/network/tmdb_client.dart';
 import '../core/storage/token_storage.dart';
+import '../data/services/favorite_api_service.dart';
 import '../data/services/auth_api_service.dart';
 import '../data/services/member_api_service.dart';
 import '../data/services/rating_api_service.dart';
@@ -77,6 +78,7 @@ class _MovieLogAppState extends State<MovieLogApp> {
   @override
   Widget build(BuildContext context) => MultiProvider(
     providers: [
+      Provider(create: (_) => FavoriteApiService(_protected)),
       Provider<TokenStorage>.value(value: _storage),
       Provider<AuthApiService>(create: (_) => AuthApiService(_public)),
       Provider<MemberApiService>.value(value: _memberApi),
